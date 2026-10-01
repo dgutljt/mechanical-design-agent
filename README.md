@@ -2,21 +2,22 @@
 
 An experimental mechanical engineering agent built with DeepSeek Harness and deterministic engineering calculation tools.
 
-**Status: V0.1 Prototype — first end-to-end mechanical calculation workflow validated.**
+**Status: V0.2 Prototype — transmitted torque and theoretical pure-torsion shaft sizing workflows validated.**
 
-## Current Capability
+## Current capabilities
 
-V0.1 supports:
+V0.2 supports:
 
-- Transmitted torque calculation from power and rotational speed.
-- Deterministic Python engineering calculation with JSON machine-readable output.
-- A DeepSeek Harness project Skill at `.dsh/skills/transmission-torque/SKILL.md`.
-- Automatic Skill discovery from natural-language requests.
-- Unit conversion for unambiguous power and speed units before calculation.
-- Invalid-input rejection, including zero rotational speed.
+- Deterministic transmitted torque calculation from power and rotational speed.
+- Theoretical minimum diameter of a solid circular shaft under pure steady torsion from torque and allowable shear stress.
+- Machine-readable JSON calculator outputs.
+- DeepSeek Harness project Skills for transmitted torque and pure-torsion solid-shaft sizing.
+- Automatic natural-language Skill discovery and multi-Skill chaining: power and speed → torque → theoretical minimum shaft diameter.
+- Unambiguous unit conversion before calculation; ambiguous or missing parameters require clarification.
+- Scope-boundary protection for unsupported analyses and invalid-input rejection, including zero rotational speed.
 - Pytest regression tests.
 
-It does not yet support shaft sizing, bending analysis, fatigue analysis, bearing selection, CAD/CAE integration, reviewer agents, or multi-agent workflows.
+The shaft result is a theoretical pure-torsion minimum diameter, not a final shaft design diameter. It does not account for bending, fatigue, keyways, stress concentration, shock or dynamic loading, stiffness, or standard preferred diameters. Final shaft sizing, bearing selection, CAD/CAE integration, reviewer agents, and multi-agent workflows are not implemented.
 
 ## Architecture
 
@@ -25,18 +26,14 @@ User request
     ↓
 DeepSeek Harness
     ↓
-transmission-torque Skill
-    ↓
-Shell tool
-    ↓
-Python deterministic calculator
-    ↓
-JSON result
+transmission-torque Skill → torque calculator → JSON torque_nm
+    ↓ (when shaft sizing is requested)
+solid-shaft-torsion Skill → shaft_torsion calculator → JSON min_diameter_mm
     ↓
 Natural-language explanation
 ```
 
-The LLM decides what calculation is required; deterministic Python code performs the engineering arithmetic. The Skill requires the Agent to use the calculator's `torque_nm` JSON field for the final numerical result.
+The Agent chooses and sequences independent Skills; deterministic Python calculators perform the engineering arithmetic. When chaining, the Agent passes the original `torque_nm` value from the first calculator's JSON to the second calculator without rounding or recomputing it.
 
 ## Setup
 
@@ -74,13 +71,15 @@ In DeepSeek Harness, the same workflow can start from a natural-language request
 
 > 一台机械传动系统输入功率为 5.5 kW，转速为 960 r/min，请求出传递转矩。
 
-The engineering formula used by this V0.1 calculator is `T = 9550 × P / n`, with `P` in kW, `n` in r/min, and `T` in N·m. The constant 9550 is the project's engineering approximation.
+The torque calculator uses `T = 9550 × P / n`, with `P` in kW, `n` in r/min, and `T` in N·m. The constant 9550 is the project's engineering approximation.
 
 ## Project Structure
 
 ```text
 mechanical-design-agent/
-├─ .dsh/skills/transmission-torque/SKILL.md
+├─ .dsh/skills/
+│  ├─ transmission-torque/SKILL.md
+│  └─ solid-shaft-torsion/SKILL.md
 ├─ examples/
 ├─ knowledge/
 ├─ outputs/
@@ -88,8 +87,11 @@ mechanical-design-agent/
 │  ├─ __init__.py
 │  └─ calculators/
 │     ├─ __init__.py
-│     └─ torque.py
-├─ tests/test_torque.py
+│     ├─ torque.py
+│     └─ shaft_torsion.py
+├─ tests/
+│  ├─ test_torque.py
+│  └─ test_shaft_torsion.py
 ├─ .gitattributes
 ├─ .gitignore
 ├─ environment.yml
