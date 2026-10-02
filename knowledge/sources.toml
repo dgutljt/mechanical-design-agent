@@ -1,0 +1,23 @@
+[[sources]]
+id = "oer_strength_materials_torsion"
+title = "Strength of Materials, Chapter 6: Torsion"
+organization_or_author = "James Lord, Amy Richardson, Sneha Davison, and David Dillard"
+source_type = "open educational resource"
+host = "Virginia Tech Publishing (public chapter hosted at jrgrohs.github.io)"
+year = 2025
+section = "6.4.1 Definition of Power; 6.4.2 Units"
+url = "https://jrgrohs.github.io/StrengthofMaterials/Chapter%206.html"
+supports = ["P = T * omega", "omega = 2 * pi * n_rpm / 60"]
+notes = "The SI kW/rpm torque conversion factor 60000/(2*pi) is derived from these relations; 9550 is this project's engineering approximation, not the exact mathematical constant."
+
+[[sources]]
+id = "air_force_stress_manual_shafting"
+title = "Stress Analysis Manual: Transmission Shafting Analysis"
+organization_or_author = "Air Force Flight Dynamics Laboratory"
+source_type = "public engineering reference manual reproduction"
+host = "EngineeringLibrary.org"
+year = 1986
+section = "10.3 Loadings on Circular Transmission Shafting; 10.4 Analysis of Combined Stresses; 10.6 Design Procedure for Circular Transmission Shafting"
+url = "https://engineeringlibrary.org/reference/shaft-analysis-air-force-stress-manual"
+supports = ["torsional surface shear stress T*r/J", "bending normal stress M*r/I", "combined maximum shear stress sqrt(tau^2 + (sigma/2)^2)", "shaft design procedure and limitations"]
+notes = "October 1986 historical manual reproduced publicly; an engineering reference for the model, not a current international standard. Solid-shaft coefficients and minimum-diameter formulas are algebraic consequences of its stress relations and circular-section properties."

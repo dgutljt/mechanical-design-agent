@@ -5,9 +5,12 @@ from dataclasses import asdict, dataclass
 import json
 import math
 
+MODEL_ID = "solid_shaft_pure_torsion_v1"
+
 
 @dataclass(frozen=True, slots=True)
 class ShaftTorsionResult:
+    model_id: str
     torque_nm: float
     torque_nmm: float
     allowable_shear_mpa: float
@@ -46,6 +49,7 @@ def calculate_solid_shaft_min_diameter(
         raise ValueError("calculated min_diameter_mm must be finite")
 
     return ShaftTorsionResult(
+        model_id=MODEL_ID,
         torque_nm=torque_nm,
         torque_nmm=torque_nmm,
         allowable_shear_mpa=allowable_shear_mpa,

@@ -14,6 +14,7 @@ def test_textbook_example_returns_structured_result():
 
     assert result.torque_nm == pytest.approx(54.7135416667)
     assert asdict(result) == {
+        "model_id": "transmitted_torque_v1",
         "power_kw": 5.5,
         "speed_rpm": 960.0,
         "torque_nm": result.torque_nm,
@@ -60,6 +61,7 @@ def test_cli_outputs_parseable_json():
     )
 
     result = json.loads(completed.stdout)
+    assert result["model_id"] == "transmitted_torque_v1"
     assert result["torque_nm"] == pytest.approx(54.7135416667)
     assert result["constant"] == 9550.0
     assert completed.stderr == ""

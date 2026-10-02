@@ -5,9 +5,12 @@ from dataclasses import asdict, dataclass
 import json
 import math
 
+MODEL_ID = "solid_shaft_combined_tresca_v1"
+
 
 @dataclass(frozen=True, slots=True)
 class CombinedShaftResult:
+    model_id: str
     bending_moment_nm: float
     bending_moment_nmm: float
     torque_nm: float
@@ -58,6 +61,7 @@ def calculate_solid_shaft_min_diameter_combined(
         raise ValueError("calculated min_diameter_mm must be finite")
 
     return CombinedShaftResult(
+        model_id=MODEL_ID,
         bending_moment_nm=bending_moment_nm,
         bending_moment_nmm=bending_moment_nmm,
         torque_nm=torque_nm,

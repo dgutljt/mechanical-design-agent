@@ -33,6 +33,7 @@ def test_combined_load_result_and_json_structure():
     assert result.torque_nmm == 50_000.0
     assert result.combined_load_term_nmm == pytest.approx(expected_term)
     assert result.criterion == "maximum shear stress (Tresca)"
+    assert result.model_id == "solid_shaft_combined_tresca_v1"
     assert "solid circular shaft" in result.assumptions
     assert "steady bending moment and torque" in result.assumptions
     assert "M_Nmm" in result.formula
@@ -125,6 +126,7 @@ def test_cli_outputs_parseable_json():
     )
 
     result = json.loads(completed.stdout)
+    assert result["model_id"] == "solid_shaft_combined_tresca_v1"
     assert result["min_diameter_mm"] == pytest.approx(24.235670632215378)
     assert result["combined_load_term_nmm"] == pytest.approx(math.hypot(100_000, 50_000))
     assert completed.stderr == ""

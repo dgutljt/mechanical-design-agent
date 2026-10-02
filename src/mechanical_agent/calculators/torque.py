@@ -5,9 +5,12 @@ from dataclasses import asdict, dataclass
 import json
 import math
 
+MODEL_ID = "transmitted_torque_v1"
+
 
 @dataclass(frozen=True, slots=True)
 class TorqueResult:
+    model_id: str
     power_kw: float
     speed_rpm: float
     torque_nm: float
@@ -36,7 +39,7 @@ def calculate_transmitted_torque(power_kw: float, speed_rpm: float) -> TorqueRes
     torque_nm = constant * power_kw / speed_rpm
     if not math.isfinite(torque_nm):
         raise ValueError("calculated torque must be finite")
-    return TorqueResult(power_kw, speed_rpm, torque_nm, "T = 9550 * P / n", constant)
+    return TorqueResult(MODEL_ID, power_kw, speed_rpm, torque_nm, "T = 9550 * P / n", constant)
 
 
 def main() -> None:

@@ -12,9 +12,14 @@ V0.3 supports:
 - Theoretical minimum diameter of a solid circular shaft under pure steady torsion from torque and allowable shear stress.
 - Combined bending and torsion theoretical sizing using the maximum shear stress criterion.
 - Machine-readable JSON calculator outputs.
+- Each calculator output includes a stable `model_id`.
+- Machine-readable engineering model provenance registry.
+- Runtime model provenance is resolved deterministically from calculator model IDs to Engineering Model Cards and registered sources.
+- Registered source attribution distinguishes underlying relations from project derivations and approximations.
 - DeepSeek Harness project Skills for transmitted torque, pure-torsion solid-shaft sizing, and combined bending-torsion sizing.
 - A combined bending and torsion DSH Skill with load-state-aware selection between pure-torsion and combined strength models.
 - Automatic natural-language Skill discovery and multi-Skill chaining: power and speed → torque → theoretical minimum shaft diameter.
+- Calculator JSON is the sole numerical authority; the Skills prohibit Agent-side recalculation, substitution, and rounding of results.
 - Torque → combined shaft sizing chaining when power, speed, and bending moment are provided.
 - Unambiguous unit conversion before calculation; ambiguous or missing parameters require clarification.
 - Scope-boundary protection for unsupported analyses and invalid-input rejection, including zero rotational speed.
@@ -39,7 +44,7 @@ combined-shaft-loading Skill → shaft_combined calculator → JSON min_diameter
 Natural-language explanation
 ```
 
-The Agent chooses and sequences independent Skills; deterministic Python calculators perform the engineering arithmetic. When chaining, the Agent passes the original `torque_nm` value from the torque calculator's JSON to the selected shaft calculator without rounding or recomputing it.
+The Agent chooses and sequences independent Skills; deterministic Python calculators perform the engineering arithmetic. When chaining, the Agent passes the original `torque_nm` value from the torque calculator's JSON to the selected shaft calculator without rounding or recomputing it. The provenance resolver uses each calculator's `model_id` to load its Engineering Model Card and registered sources; it does not calculate engineering results. The Skills use calculator JSON for numerical results and resolver JSON for model and source facts.
 
 ## Setup
 
@@ -65,6 +70,7 @@ Example JSON output:
 
 ```json
 {
+  "model_id": "transmitted_torque_v1",
   "power_kw": 5.5,
   "speed_rpm": 960.0,
   "torque_nm": 54.713541666666664,
@@ -89,9 +95,16 @@ mechanical-design-agent/
 │  └─ combined-shaft-loading/SKILL.md
 ├─ examples/
 ├─ knowledge/
+│  ├─ README.md
+│  ├─ sources.toml
+│  └─ models/
+│     ├─ transmitted_torque.toml
+│     ├─ solid_shaft_pure_torsion.toml
+│     └─ solid_shaft_combined_tresca.toml
 ├─ outputs/
 ├─ src/mechanical_agent/
 │  ├─ __init__.py
+│  ├─ knowledge_registry.py
 │  └─ calculators/
 │     ├─ __init__.py
 │     ├─ torque.py
@@ -100,7 +113,8 @@ mechanical-design-agent/
 ├─ tests/
 │  ├─ test_torque.py
 │  ├─ test_shaft_torsion.py
-│  └─ test_shaft_combined.py
+│  ├─ test_shaft_combined.py
+│  └─ test_knowledge_registry.py
 ├─ .gitattributes
 ├─ .gitignore
 ├─ environment.yml

@@ -22,6 +22,7 @@ def test_case_a_100_nm_and_50_mpa():
 
     assert result.min_diameter_mm == pytest.approx(expected_mm)
     assert asdict(result) == {
+        "model_id": "solid_shaft_pure_torsion_v1",
         "torque_nm": 100.0,
         "torque_nmm": 100000.0,
         "allowable_shear_mpa": 50.0,
@@ -96,6 +97,7 @@ def test_cli_outputs_parseable_json():
     )
 
     result = json.loads(completed.stdout)
+    assert result["model_id"] == "solid_shaft_pure_torsion_v1"
     expected_mm = (16 * (54.713541666666664 * 1000) / (math.pi * 30)) ** (1 / 3)
     assert result["min_diameter_mm"] == pytest.approx(expected_mm)
     assert result["torque_nmm"] == pytest.approx(54713.541666666664)

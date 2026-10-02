@@ -1,0 +1,15 @@
+model_id = "transmitted_torque_v1"
+title = "Transmitted torque from power and rotational speed"
+status = "validated calculator model"
+calculator_module = "mechanical_agent.calculators.torque"
+calculator_function = "calculate_transmitted_torque"
+dsh_skill = "transmission-torque"
+purpose = "Calculate steady transmitted torque from mechanical power and shaft speed."
+equation = "T_Nm = 9550 * P_kW / n_rpm"
+derivation = "P = T * omega; omega = 2 * pi * n_rpm / 60. With P in kW and T in N*m, the mathematical conversion factor is 60000/(2*pi) = approximately 9549.296. The calculator uses the common engineering approximation 9550."
+inputs = ["power_kw", "speed_rpm"]
+output = "torque_nm"
+units = ["P_kW: kW", "n_rpm: revolutions per minute", "T_Nm: N*m"]
+assumptions = ["Power and speed describe the same shaft operating point.", "Steady mechanical power transmission.", "Input power is non-negative and speed is positive."]
+limitations = ["The 9550 coefficient is an engineering approximation, not an exact conversion constant.", "Does not calculate losses, efficiency, transient torque, or load variation."]
+source_ids = ["oer_strength_materials_torsion"]

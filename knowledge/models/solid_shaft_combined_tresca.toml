@@ -1,0 +1,16 @@
+model_id = "solid_shaft_combined_tresca_v1"
+title = "Theoretical solid-shaft diameter under combined bending and torsion"
+status = "validated calculator model"
+calculator_module = "mechanical_agent.calculators.shaft_combined"
+calculator_function = "calculate_solid_shaft_min_diameter_combined"
+dsh_skill = "combined-shaft-loading"
+purpose = "Size a solid circular shaft under steady bending moment and torque using allowable maximum shear stress."
+criterion = "maximum shear stress (Tresca)"
+equation = "sigma_b = 32*M_Nmm/(pi*d_mm^3); tau_t = 16*T_Nmm/(pi*d_mm^3); tau_eq = sqrt(tau_t^2 + (sigma_b/2)^2); d_min_mm = (16*sqrt(M_Nmm^2 + T_Nmm^2)/(pi*tau_allow_MPa))^(1/3)"
+derivation = "Sections 10.3 and 10.4 give sigma = M*r/I, tau = T*r/J, and maximum shear sqrt(tau^2 + (sigma/2)^2). For a solid circle, I = pi*d^4/64 and J = pi*d^4/32. The d_min expression is derived algebraically from these stress equations."
+inputs = ["bending_moment_nm", "torque_nm", "allowable_shear_mpa"]
+output = "min_diameter_mm"
+units = ["M and T inputs: N*m", "M and T internal: N*mm (inputs multiplied by 1000)", "sigma, tau, and tau_allow: MPa = N/mm^2", "d: mm"]
+assumptions = ["solid circular shaft", "elastic stress analysis", "steady bending moment and torque", "theoretical strength sizing only", "no fatigue or alternating loading", "no shock or dynamic loading", "no keyway, shoulders, or stress concentration", "no axial force", "no stiffness, deflection, or critical speed criterion", "no standard preferred diameter"]
+limitations = ["Theoretical minimum strength diameter only; not a final production diameter.", "Does not evaluate fatigue, alternating or shock loading, keyways, shoulders, stress concentrations, or axial force.", "Does not check stiffness, deflection, critical speed, or standard preferred diameters; the reference's Section 10.6 calls for further design checks."]
+source_ids = ["air_force_stress_manual_shafting"]
