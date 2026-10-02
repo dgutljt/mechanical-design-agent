@@ -27,6 +27,32 @@ python -m mechanical_agent.calculators.torque --power-kw 5.5 --speed-rpm 960
 
 Parse the CLI's JSON output. Its `torque_nm` field is the sole authority for the numerical result. You may explain the formula, but do not replace the Python result with a number calculated by the model. If the CLI fails, report its error and do not invent a result.
 
+## Mandatory Reviewer Gate
+
+A deterministic calculator result is not validated merely because the calculator completed successfully. Pass every calculator JSON used in an engineering answer, unchanged from calculator stdout, directly to the deterministic Reviewer stdin:
+
+```powershell
+$result = python -m mechanical_agent.calculators.torque --power-kw 5.5 --speed-rpm 960
+$result
+$result | python -m mechanical_agent.review.engineering_result
+```
+
+Do not reconstruct, edit, or reserialize the JSON with the language model. Confirm the printed calculator JSON and the Reviewer JSON. Only a Reviewer JSON `status` of `PASS` (with successful Reviewer exit) validates that calculator result. Only then may its `torque_nm` be used in an answer, passed to a downstream shaft calculator, or its `model_id` sent to the provenance resolver. In a chain, review every calculator's original JSON and require PASS before consuming its result downstream; resolve all actually used model IDs only after all required reviews PASS.
+
+If Reviewer status is `FAIL`, do not present the result as valid, pass it downstream, override the Reviewer with language-model judgment, or fix it with manual arithmetic. You may rerun the same deterministic calculator once with exactly the same original inputs and review that new raw JSON. If the second review passes, continue and briefly mention the deterministic rerun. If it fails, stop the engineering calculation chain and report that deterministic verification failed, with the Reviewer errors. Never retry more than once.
+
+If the Reviewer cannot start, exits with malformed-input code 2, or has another operational error, verification is unavailable. Do not treat that as PASS or bypass the Reviewer; report that deterministic verification could not be completed. Reviewer JSON validates the result but does not create a new engineering number. After PASS, calculator JSON remains the numerical truth, and resolver JSON remains the provenance truth.
+
+In the final answer, give the requested calculator output `torque_nm` and the user's inputs as numerical case values. Apply the presentation rules below to auxiliary numbers.
+
+## Final-answer numeric presentation
+
+Calculator JSON is authoritative for engineering numbers, Reviewer JSON for validation status, and resolver JSON for provenance metadata. The Agent selects which already-authoritative facts answer the user's question; it must not calculate, invent, round, or rewrite a number. When this calculator participates, show its `torque_nm` verbatim and any relevant user-provided inputs. The symbolic formula `T = 9550 P / n` and the wording "the project uses the common 9550 engineering approximation" are allowed.
+
+By default, omit alternative or exact conversion constants, intermediate arithmetic or stress values, internal conversion fields such as `torque_nmm`, and Model Card derivation-note numbers. In particular, do not volunteer `9549.296`. Resolver provenance does not require copying every numeric note, year, derivation detail, or metadata field into the final answer. Cite only relevant registered sources and accurately distinguish what the source supports from the project's implementation.
+
+If the user explicitly asks where `9550` comes from, why it is approximate, or for the precise conversion factor, explain the registered derivation using the Model Card and resolver. In that requested explanation, the Model Card's approximately `9549.296` may be shown as the mathematical unit-conversion value, distinct from the project's `9550` engineering approximation. Attribute the underlying `P = T * omega` and angular-speed relation to the registered source, not the project's approximation. Do not derive a different number with language-model arithmetic. The engineering result still comes only from calculator JSON.
+
 ## Numeric Truth Contract
 
 Once a deterministic calculator has returned JSON, that JSON is the sole numerical authority for that calculation. Use the `torque_nm` field verbatim in the final answer, including all returned digits and its N·m unit. Do not perform display rounding unless the displayed value itself comes from a deterministic tool.
@@ -65,3 +91,13 @@ When this Skill is chained with another calculator, resolve every unique `model_
 ## Runtime
 
 Start DeepSeek Harness from the repository root after `conda activate mech-agent`, using `npx.cmd @deepseek-ai/dsh web`. Its Shell should inherit the activated Python environment. Do not hard-code a machine-specific Python path.
+
+## Final response check
+
+After reading resolver JSON and immediately before sending the final response, inspect the *final response text* for auxiliary numbers. For an ordinary torque calculation or a request to briefly state the model basis, remove `9549.296` and all other derivation-note numbers, alternative constants, numeric metadata, and intermediate values. Do not copy the resolver's derivation note or source metadata wholesale. The final response may state `T = 9550 P / n`, call `9550` the project's common engineering approximation, and give the calculator's exact `torque_nm` plus relevant user inputs. A brief basis is enough: the Strength of Materials torsion chapter supports the underlying power–angular-speed relations; the project's Model Card specifies `9550`.
+
+Only when the user explicitly asks to derive or compare the conversion constant may the final response include the Model Card's approximately `9549.296`, labeled as the mathematical unit-conversion value. Do not recompute it or add a different numeric value. This explicit-request exception applies only to the explanation; the engineering result remains the reviewed calculator JSON value.
+
+For that explicit derivation request, stay within the registered derivation: `P = T * omega`, `omega = 2 * pi * n_rpm / 60`, and `60000/(2*pi) = approximately 9549.296`; distinguish this mathematical conversion from the project's `9550` approximation. Do not calculate or state a relative or absolute error, percentage, ratio, extra significant digits, or any quantitative comparison absent from the Model Card. Do not abbreviate the calculator result with an ellipsis or a rounded example anywhere in the final answer. Do not add claims about precision, uncertainty, common textbook usage, or design significance that the resolver does not establish.
+
+For every occurrence of the transmitted torque in the final response, use the exact `torque_nm` JSON digits. Do not append an approximate, shortened, or rounded restatement in a summary, conclusion, or example. If repeating the full value would be awkward, refer to "the above torque result" without another number.

@@ -15,6 +15,8 @@ V0.3 supports:
 - Each calculator output includes a stable `model_id`.
 - Machine-readable engineering model provenance registry.
 - Runtime model provenance is resolved deterministically from calculator model IDs to Engineering Model Cards and registered sources.
+- Deterministic engineering result reviewer with inverse and consistency checks. Reviewer V1 currently validates only the three registered engineering models.
+- Engineering calculator outputs are gated by the deterministic reviewer before the DSH agent accepts them.
 - Registered source attribution distinguishes underlying relations from project derivations and approximations.
 - DeepSeek Harness project Skills for transmitted torque, pure-torsion solid-shaft sizing, and combined bending-torsion sizing.
 - A combined bending and torsion DSH Skill with load-state-aware selection between pure-torsion and combined strength models.

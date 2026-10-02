@@ -40,6 +40,32 @@ Quote numeric arguments in PowerShell, especially long decimal values. Parse the
 
 For power and speed plus bending, first use `transmission-torque` and its torque CLI. Copy the exact `torque_nm` number from that CLI's JSON into the quoted `--torque-nm` argument above; do not round or recompute it. The Python calculators do not call one another. The Agent performs this sequence.
 
+## Mandatory Reviewer Gate
+
+A deterministic calculator result is not validated merely because the calculator completed successfully. Pass every calculator JSON used in an engineering answer, unchanged from calculator stdout, directly to the deterministic Reviewer stdin:
+
+```powershell
+$result = python -m mechanical_agent.calculators.shaft_combined --bending-moment-nm "100" --torque-nm "50" --allowable-shear-mpa "40"
+$result
+$result | python -m mechanical_agent.review.engineering_result
+```
+
+Do not reconstruct, edit, or reserialize the JSON with the language model. Confirm the printed calculator JSON and the Reviewer JSON. Only a Reviewer JSON `status` of `PASS` (with successful Reviewer exit) validates that calculator result. Only then may its `min_diameter_mm` be used in an answer or its `model_id` sent to the provenance resolver. For power/speed plus bending, first run the transmission-torque calculator and review its original JSON. Do not read or pass its `torque_nm` to this combined calculator until that upstream Reviewer returns PASS. Then run and review this combined calculator's original JSON. Resolve both actually used model IDs only after both reviews PASS.
+
+If Reviewer status is `FAIL`, do not present the result as valid, pass it downstream, override the Reviewer with language-model judgment, or fix it with manual arithmetic. You may rerun the same deterministic calculator once with exactly the same original inputs and review that new raw JSON. If the second review passes, continue and briefly mention the deterministic rerun. If it fails, stop the engineering calculation chain and report that deterministic verification failed, with the Reviewer errors. Never retry more than once.
+
+If the Reviewer cannot start, exits with malformed-input code 2, or has another operational error, verification is unavailable. Do not treat that as PASS or bypass the Reviewer; report that deterministic verification could not be completed. Reviewer JSON validates the result but does not create a new engineering number. After PASS, calculator JSON remains the numerical truth, and resolver JSON remains the provenance truth.
+
+In the final answer, give the requested calculator outputs (`torque_nm` when obtained upstream, and `min_diameter_mm`) and relevant user-provided inputs. Apply the presentation rules below to auxiliary numbers.
+
+## Final-answer numeric presentation
+
+Calculator JSON is authoritative for engineering numbers, Reviewer JSON for validation status, and resolver JSON for provenance metadata. The Agent selects which already-authoritative facts answer the user's question; it must not calculate, invent, round, or rewrite a number. Show requested `torque_nm` and `min_diameter_mm` fields verbatim.
+
+By default, omit alternative or exact conversion constants, intermediate arithmetic or stress values, and internal fields including `combined_load_term_nmm`, `torque_nmm`, and `bending_moment_nmm`. Do not volunteer the torque Model Card's `9549.296` or other derivation-note numbers. The symbolic `T = 9550 P / n` and the project's common `9550` engineering approximation may be stated. Resolver provenance does not require copying every numeric note, year, derivation detail, or metadata field. Present only relevant registered sources and accurately distinguish their supported relations from project derivations and implementation.
+
+If the user explicitly requests the derivation of `9550` or its precise conversion factor, the torque Model Card's approximately `9549.296` may be used in that explanation, distinct from the project's `9550` approximation. Use only already-registered values and derivation facts; do not perform language-model arithmetic. Engineering results remain the calculator JSON values.
+
 ## Numeric Truth Contract
 
 Once a deterministic calculator has returned JSON, that JSON is the sole numerical authority for that calculation. Use the combined calculator's `min_diameter_mm` field verbatim in the final answer, including all returned digits and its mm unit. In a power/speed chain, also use the torque calculator's `torque_nm` field verbatim, including all returned digits and its N·m unit. Do not perform display rounding unless the displayed value itself comes from a deterministic tool.
@@ -71,3 +97,13 @@ For a power/speed → torque → combined shaft chain, resolve both the torque m
 - For `solid_shaft_combined_tresca_v1`, attribute only `sigma = M*r/I`, `tau = T*r/J`, and `sqrt(tau^2 + (sigma/2)^2)` directly to the registered Air Force source. The solid-circle substitutions `sigma_b = 32M/(pi*d^3)` and `tau_t = 16T/(pi*d^3)`, as well as the combined `d_min` equation, are algebraic derivations recorded in the project Model Card. Do not say the manual directly gives these project forms unless the resolver explicitly supports that exact claim.
 - When chaining `transmitted_torque_v1`, the registered OER supports the underlying power–torque and angular-speed relations; `9550` is the project's engineering approximation. Do not attribute `9550` directly to the OER unless its resolver source explicitly supports that claim.
 - Name unchecked engineering factors by category only. Do not add numerical design limits, ranges, standard sizes, correction factors, or thresholds absent from the calculator and resolver output. Do not imply the registered source endorses every item in an expanded unchecked-factors list; its Section 10.6 only supports the need for further design checks as stated by the resolver.
+
+## Final response check
+
+After reading both resolver JSON records and immediately before sending the final response, inspect the *final response text* for auxiliary numbers. For an ordinary chained result or brief model basis, remove `9549.296`, other derivation-note numbers, alternative constants, numeric metadata, and calculator intermediate values such as `torque_nmm`, `bending_moment_nmm`, and `combined_load_term_nmm`. Show only requested reviewed `torque_nm` and `min_diameter_mm` values plus relevant user inputs. Do not copy provenance metadata wholesale. A brief basis can name the Strength of Materials torsion chapter for the underlying power–angular-speed relations and the Air Force Stress Analysis Manual shaft-analysis sections for the supported stress relations. Attribute `9550` to the project approximation and the sizing equation to the project Model Card.
+
+Only an explicit user request about the derivation or precise value of the torque conversion constant permits the torque Model Card's approximately `9549.296` in the explanation. Do not recompute it or add a different numeric value. Engineering results remain the reviewed calculator JSON values.
+
+Even for that request, do not calculate or state an unregistered error percentage, ratio, extra significant digits, or quantitative comparison, and do not abbreviate any calculator result with an ellipsis or rounded example.
+
+For every occurrence of a calculated torque or diameter in the final response, use the exact corresponding JSON digits. Do not append an approximate, shortened, or rounded restatement in a summary, conclusion, or example. In particular, after showing `24.39260204039009 mm`, never restate it as "about 24.39 mm". Refer to "the above theoretical minimum" instead of repeating a long number.
