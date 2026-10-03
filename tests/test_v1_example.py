@@ -43,6 +43,9 @@ def test_v1_demo_verify_and_generated_artifacts(tmp_path):
     assert actual["review_status"] == dict.fromkeys(
         ("torque", "statics", "combined", "verified_handoff"), "PASS"
     )
+    manifest = json.loads((output / "diagram_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["shear_force_svg"] == "shear_force_diagram.svg"
+    assert manifest["bending_moment_svg"] == "bending_moment_diagram.svg"
     for name in GOLDEN:
         assert (output / name).read_bytes() == (EXAMPLE / "expected" / name).read_bytes()
     for name in ("torque.json", "statics.json", "strength_workflow.json",

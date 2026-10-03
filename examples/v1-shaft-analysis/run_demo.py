@@ -59,6 +59,10 @@ def run_demo(output_dir: Path) -> dict:
         output_path=output_dir / "shaft_analysis_report.html",
     )
 
+    diagram_manifest = asdict(diagrams)
+    for key in ("shear_force_svg", "bending_moment_svg"):
+        diagram_manifest[key] = Path(diagram_manifest[key]).name
+
     artifacts = {
         "torque.json": torque,
         "statics.json": statics,
@@ -66,7 +70,7 @@ def run_demo(output_dir: Path) -> dict:
         "torque_provenance.json": provenance["torque"],
         "statics_provenance.json": provenance["statics"],
         "combined_provenance.json": provenance["combined"],
-        "diagram_manifest.json": asdict(diagrams),
+        "diagram_manifest.json": diagram_manifest,
     }
     for name, payload in artifacts.items():
         _write_json(output_dir / name, payload)
