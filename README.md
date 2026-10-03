@@ -13,7 +13,9 @@ V0.3 supports:
 - Combined bending and torsion theoretical sizing using the maximum shear stress criterion.
 - Static reaction and maximum bending-moment analysis for a simply supported shaft with one transverse point load (one plane; no distributed or dynamic loading).
 - Deterministic statics for multiple same-direction transverse point loads, including piecewise shear/bending-moment data and maximum-moment plateau detection (one plane, point loads only).
+- Optional deterministic SVG shear-force and bending-moment diagrams from reviewed multi-load statics segment data.
 - Reviewed multi-load statics maximum moment can feed combined bending-torsion strength sizing after both torque and statics results pass review.
+- Cross-calculator torque/statics → combined-strength chaining uses a deterministic verified handoff so upstream engineering values are taken directly from reviewed calculator JSON rather than retyped by the LLM.
 - Machine-readable JSON calculator outputs.
 - Each calculator output includes a stable `model_id`.
 - Machine-readable engineering model provenance registry.
@@ -52,7 +54,18 @@ combined-shaft-loading Skill → shaft_combined calculator → JSON min_diameter
 Natural-language explanation
 ```
 
-The Agent chooses and sequences independent Skills; deterministic Python calculators perform the engineering arithmetic. When chaining, the Agent passes the original `torque_nm` value from the torque calculator's JSON to the selected shaft calculator without rounding or recomputing it. The provenance resolver uses each calculator's `model_id` to load its Engineering Model Card and registered sources; it does not calculate engineering results. The Skills use calculator JSON for numerical results and resolver JSON for model and source facts.
+The Agent chooses and sequences independent Skills; deterministic Python calculators perform the engineering arithmetic. For the supported torque + multi-load statics → combined-strength chain, the Agent passes both untouched raw calculator JSON strings to `mechanical_agent.workflows.verified_shaft_strength`. That workflow repeats both upstream Reviewer checks, transfers the exact torque and maximum-moment fields, calls the existing combined calculator, and reviews its result. The provenance resolver uses each calculator's `model_id` to load its Engineering Model Card and registered sources; it does not calculate engineering results. The Skills use calculator JSON for numerical results and resolver JSON for model and source facts.
+
+Validated multi-point-load statics results can optionally be rendered as deterministic SVG shear-force and bending-moment diagrams after the Reviewer gate passes. Diagrams are presentation artifacts; the renderer does not validate or recompute statics. It currently supports only `simply_supported_multi_point_load_v1`. From the repository root, when diagrams are requested:
+
+```powershell
+$result = python -m mechanical_agent.calculators.shaft_statics_multi --span-mm 600 --load "1000@200" --load "500@450"
+$review = $result | python -m mechanical_agent.review.engineering_result
+if ($LASTEXITCODE -ne 0 -or ($review | ConvertFrom-Json).status -ne "PASS") { throw "statics review did not pass" }
+$result | python -m mechanical_agent.presentation.shaft_diagrams --output-dir "artifacts/generated/shaft-diagrams"
+```
+
+The renderer writes `shear_force_diagram.svg` and `bending_moment_diagram.svg` to the project-local generated directory and prints a JSON presentation manifest. `artifacts/generated/` is ignored by Git. Engineering values still come from the calculator JSON.
 
 ## Setup
 

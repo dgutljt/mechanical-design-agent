@@ -9,6 +9,7 @@ user-invocable: true
 
 Use only for two ideal simple supports, one transverse point load, one plane, and static loading. Reject multiple loads, distributed loads, overhung shafts, gear-force decomposition, two-plane loading, dynamic loading, and deflection. State clearly that the current Skill supports only one point load; never combine two loads or silently discard one.
 For a distributed-load request, state that only discrete point loads are supported and stop. Do not offer an unreviewed distributed-load equation or design value as a substitute.
+If the user requests a diagram for one point load, keep this more specific validated model. Deliver reviewed numerical results, then explain that deterministic SVG rendering is currently integrated only for the multi-point statics model. Do not switch to that calculator, hand-draw a diagram, or generate SVG from the language model.
 
 ## Calculator and Reviewer Gate
 

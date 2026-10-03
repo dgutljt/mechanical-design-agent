@@ -39,6 +39,7 @@ yarn-error.log*
 # Generated output
 outputs/*
 !outputs/.gitkeep
+artifacts/generated/
 
 # Windows
 Thumbs.db

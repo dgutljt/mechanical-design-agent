@@ -28,6 +28,44 @@ If bending is stated but its moment is missing, ask for the bending moment value
 
 This model excludes fatigue, alternating loading, shock or dynamic loading, keyways, shoulders, stress concentrations, axial force, stiffness, deflection, critical speed, and final shaft design. It does not select a standard or production diameter, add a safety factor, or choose a material. If asked for a final production diameter, give only the supported theoretical minimum when inputs are complete and clearly state that final sizing is unsupported. Do not round up to 25 mm, 30 mm, or another standard size.
 
+## Verified upstream chaining
+
+If both bending moment and torque are produced by project calculators in the current task, do not manually copy, round, recompute, or retype either numerical field into the combined calculator CLI. For the supported `transmitted_torque_v1` + `simply_supported_multi_point_load_v1` chain, preserve the untouched raw calculator stdout strings and run the deterministic handoff:
+
+```powershell
+@($torque, $statics) | python -m mechanical_agent.workflows.verified_shaft_strength --allowable-shear-mpa "40"
+```
+
+`$torque` and `$statics` must be the original one-line JSON stdout strings from their respective calculators, in that order. Require workflow JSON `status` = `PASS` and successful exit. The workflow independently reviews both upstream JSON objects, extracts their exact `torque_nm` and `max_bending_moment_nm` fields, calls the existing combined calculator, and reviews its result. If it fails, stop the engineering chain and report its errors. Do not invoke `shaft_combined --bending-moment-nm "<copied upstream value>" --torque-nm "<copied upstream value>"` for this chain. Renderer manifests, SVGs, and LLM text are never workflow inputs. Resolve provenance for the three calculator model IDs after workflow PASS.
+
+The Shell tool does not preserve PowerShell variables between calls. Run the upstream calculators, their external Reviewer gates, optional renderer, and verified workflow in **one Shell call** so the workflow and renderer receive the same original stdout strings that passed review. Do not rerun either upstream calculator merely to recreate `$torque` or `$statics` in a later call. For the two-load case with requested diagrams, use this sequence:
+
+```powershell
+$torque = python -m mechanical_agent.calculators.torque --power-kw 5.5 --speed-rpm 960
+if ($LASTEXITCODE -ne 0) { throw "torque calculator failed" }
+Write-Output "TORQUE_RAW: $torque"
+$torqueReview = $torque | python -m mechanical_agent.review.engineering_result
+if ($LASTEXITCODE -ne 0 -or ($torqueReview | ConvertFrom-Json).status -ne "PASS") { throw "torque Reviewer failed: $torqueReview" }
+Write-Output "TORQUE_REVIEW: $torqueReview"
+$statics = python -m mechanical_agent.calculators.shaft_statics_multi --span-mm "600" --load "1000@200" --load "500@450"
+if ($LASTEXITCODE -ne 0) { throw "statics calculator failed" }
+Write-Output "STATICS_RAW: $statics"
+$staticsReview = $statics | python -m mechanical_agent.review.engineering_result
+if ($LASTEXITCODE -ne 0 -or ($staticsReview | ConvertFrom-Json).status -ne "PASS") { throw "statics Reviewer failed: $staticsReview" }
+Write-Output "STATICS_REVIEW: $staticsReview"
+$manifest = $statics | python -m mechanical_agent.presentation.shaft_diagrams --output-dir "artifacts/generated/shaft-diagrams"
+if ($LASTEXITCODE -ne 0) { Write-Warning "diagram rendering failed" } else { Write-Output "MANIFEST: $manifest" }
+$chain = @($torque, $statics) | python -m mechanical_agent.workflows.verified_shaft_strength --allowable-shear-mpa "40"
+if ($LASTEXITCODE -ne 0 -or ($chain | ConvertFrom-Json).status -ne "PASS") { throw "verified workflow failed: $chain" }
+Write-Output "WORKFLOW: $chain"
+```
+
+Omit the renderer lines if no diagram was requested. Substitute only the user's input values into calculator arguments; never construct or modify the calculator JSON or copy its engineering output values into CLI arguments.
+
+After workflow PASS, do not run a separate PowerShell/Python arithmetic check of reactions, bending moments, stress, diameter, or a nearby standard size. The deterministic Reviewers already perform the numerical checks. Do not create a report file unless the user requested a report artifact. In the final answer, use only the exact reviewed calculator JSON engineering fields requested by the user; do not add a second hand-derived reaction, moment, stress, diameter, rounded ASCII sketch label, numeric substitution, or approximate restatement. A symbolic formula and the generated SVG links are enough to explain the result.
+
+The direct combined CLI below remains appropriate when the user supplies M and T directly, or for other supported standalone cases without both project upstream results.
+
 ## Mandatory deterministic calculation
 
 From the project root with the `mech-agent` Conda environment active, run the independent Python calculator through Shell:
@@ -38,7 +76,7 @@ python -m mechanical_agent.calculators.shaft_combined --bending-moment-nm "<M>" 
 
 Quote numeric arguments in PowerShell, especially long decimal values. Parse the CLI JSON. Its `min_diameter_mm` is the sole authority for the final numerical diameter. Never replace it with a diameter calculated by the language model. You may explain the formula and limitations. If the CLI fails, report its error without inventing a result.
 
-For power and speed plus bending, first use `transmission-torque` and its torque CLI. Copy the exact `torque_nm` number from that CLI's JSON into the quoted `--torque-nm` argument above; do not round or recompute it. The Python calculators do not call one another. The Agent performs this sequence.
+For power and speed plus a user-provided bending moment, first use `transmission-torque` and its torque CLI. Copy the exact `torque_nm` number from that CLI's JSON into the quoted `--torque-nm` argument above; do not round or recompute it. When bending also comes from the supported multi-load project calculator, the Verified upstream chaining rule takes precedence: pass both untouched raw JSON strings to the workflow and do not issue this direct combined CLI call.
 
 ## Mandatory Reviewer Gate
 
@@ -72,7 +110,7 @@ Once a deterministic calculator has returned JSON, that JSON is the sole numeric
 
 The Agent MUST NOT independently recompute either engineering result, use mental arithmetic to verify it, substitute numeric inputs into a formula and evaluate them, produce a second independently calculated value, compare a self-calculated result with the calculator result, or replace a JSON value with a rounded or recomputed value. Explain formulas in symbolic form only; never show a numeric substitution or a model-evaluated intermediate result. The deterministic calculators evaluated the stated relations using the stated inputs.
 
-If the user requests recalculation, numeric substitution, hand verification, or a check of the result, rerun the corresponding deterministic calculator with the same inputs and compare its first and second JSON outputs. For a chained result, rerun each calculator whose result is being checked and pass the original `torque_nm` JSON value directly to the combined calculator. Report matching outputs as a repeat calculator run, never as a hand calculation. A formula in the resolver's Model Card explains the model but does not authorize the Agent to calculate the final engineering number. Calculator JSON is numerical truth; resolver JSON is provenance truth; the Agent supplies wording and orchestration.
+If the user requests recalculation, numeric substitution, hand verification, or a check of the result, rerun the corresponding deterministic calculator with the same inputs and compare its first and second JSON outputs. For the supported torque + multi-load statics chain, pass both new untouched raw JSON strings to the verified workflow. For other chained results, follow their applicable calculator rules. Report matching outputs as a repeat calculator run, never as a hand calculation. A formula in the resolver's Model Card explains the model but does not authorize the Agent to calculate the final engineering number. Calculator JSON is numerical truth; resolver JSON is provenance truth; the Agent supplies wording and orchestration.
 
 For example, with 100 N·m bending moment, 50 N·m torque, and 40 MPa allowable shear stress:
 

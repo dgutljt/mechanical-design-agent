@@ -27,6 +27,8 @@ python -m mechanical_agent.calculators.torque --power-kw 5.5 --speed-rpm 960
 
 Parse the CLI's JSON output. Its `torque_nm` field is the sole authority for the numerical result. You may explain the formula, but do not replace the Python result with a number calculated by the model. If the CLI fails, report its error and do not invent a result.
 
+For a supported torque + multi-point statics → combined-strength chain, preserve this calculator's original raw JSON stdout string. After the external torque and statics Reviewer gates PASS, pass both untouched strings to `mechanical_agent.workflows.verified_shaft_strength` (torque first, statics second). Do not have the language model copy, round, or recompute `torque_nm` and pass it directly to the combined calculator CLI. The workflow repeats both upstream reviews and performs the exact numerical handoff. Other standalone torque uses retain the rules below.
+
 ## Mandatory Reviewer Gate
 
 A deterministic calculator result is not validated merely because the calculator completed successfully. Pass every calculator JSON used in an engineering answer, unchanged from calculator stdout, directly to the deterministic Reviewer stdin:
