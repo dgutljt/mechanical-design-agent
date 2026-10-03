@@ -1,5 +1,7 @@
 # Mechanical Design Agent
 
+**Current release:** 0.1.0 · **Status:** Experimental / educational V1 · **License:** [MIT](LICENSE)
+
 A deterministic, review-gated mechanical engineering agent built on DeepSeek Harness.
 
 The LLM understands requests and orchestrates tools; deterministic Python performs the engineering calculations. Reviewer gates validate supported results, a provenance registry links each model to its assumptions and sources, and Verified Handoff preserves exact numerical lineage in the supported calculator chain. **The LLM is not the numerical authority.** This is an experimental engineering agent, not a general shaft design system.
@@ -85,7 +87,7 @@ The LLM chooses and sequences the tools and explains their results. Python calcu
 
 ## Setup and Quick Start
 
-The project requires Python 3.12 or later. The development and current acceptance environment used **Python 3.12**, **Node.js 24**, **DeepSeek Harness 0.2.0-rc.2**, and **Windows**. The package is configured for an editable source install; it is not published as a release package.
+The project requires Python 3.12 or later. The development and current acceptance environment used **Python 3.12**, **Node.js 24**, **DeepSeek Harness 0.2.0-rc.2**, and **Windows**. The package is configured for an editable source install and is not published to a package index.
 
 Create and activate a Python 3.12 environment first; [environment.yml](environment.yml) provides a Conda specification. Then, from the repository root, install the source package:
 
@@ -156,6 +158,7 @@ mechanical-design-agent/
 │  └─ reporting/               # HTML report
 ├─ tests/                      # Regression and contract tests
 ├─ environment.yml
+├─ LICENSE
 └─ pyproject.toml
 ```
 
@@ -170,7 +173,7 @@ mechanical-design-agent/
 
 | Stage | Scope |
 | --- | --- |
-| **V1 · Current** | Deterministic shaft-analysis workflow, Reviewer, provenance, SVG diagrams, HTML report |
+| **V1 · Current (0.1.0)** | Deterministic shaft-analysis workflow, Reviewer, provenance, SVG diagrams, HTML report |
 | **V1.5** | Native DSH mechanical plugin and typed tools |
 | **V2** | CATIA parameterized shaft generation |
 | **V3** | CAE verification and theory-versus-FEA comparison |
