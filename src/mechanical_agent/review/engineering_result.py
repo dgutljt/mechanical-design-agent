@@ -30,6 +30,11 @@ CONTRACTS = {
         ("load_n", "span_mm", "load_position_mm", "reaction_a_n", "reaction_b_n",
          "max_bending_moment_nmm", "max_bending_moment_nm", "max_moment_position_mm"),
         ("formula", "assumptions")),
+    "simply_supported_multi_point_load_v1": (
+        "mechanical_agent.calculators.shaft_statics_multi", "calculate_simply_supported_point_loads",
+        ("span_mm", "total_load_n", "reaction_a_n", "reaction_b_n",
+         "max_bending_moment_nmm", "max_bending_moment_nm"),
+        ("formula", "assumptions")),
 }
 
 
@@ -61,6 +66,12 @@ class ReviewResult:
 def _close(actual: float, expected: float) -> bool:
     return math.isfinite(expected) and math.isclose(
         actual, expected, rel_tol=REL_TOL, abs_tol=ABS_TOL
+    )
+
+
+def _moment_close(actual: float, expected: float) -> bool:
+    return math.isfinite(expected) and math.isclose(
+        actual, expected, rel_tol=REL_TOL, abs_tol=1e-9
     )
 
 
@@ -162,11 +173,116 @@ def _statics(data: dict, review: ReviewResult) -> None:
                "maximum moment position does not match load position")
 
 
+def _multi_statics(data: dict, review: ReviewResult) -> None:
+    nested = {
+        "loads": ("load_n", "position_mm"),
+        "segments": ("x_start_mm", "x_end_mm", "shear_n",
+                     "moment_start_nmm", "moment_end_nmm"),
+        "max_moment_regions": ("x_start_mm", "x_end_mm"),
+    }
+    for name, fields in nested.items():
+        value = data.get(name)
+        valid = (isinstance(value, list) and bool(value)
+                 and all(isinstance(item, dict)
+                         and all(field in item and _finite_number(item[field])
+                                 for field in fields) for item in value))
+        review.add(f"{name}_structure", valid, f"{name} must be a non-empty list of finite numeric records")
+        if not valid:
+            return
+    span = data["span_mm"]
+    loads = data["loads"]
+    segments = data["segments"]
+    regions = data["max_moment_regions"]
+    valid = (span > 0 and all(item["load_n"] >= 0
+                            and 0 <= item["position_mm"] <= span for item in loads))
+    review.add("input_ranges", valid, "span must be positive; loads must be non-negative and within supports")
+    if not valid:
+        return
+    ordered = all(a["position_mm"] <= b["position_mm"] for a, b in zip(loads, loads[1:]))
+    review.add("load_order", ordered, "loads must be sorted by position")
+    total = math.fsum(item["load_n"] for item in loads)
+    left, right = data["reaction_a_n"], data["reaction_b_n"]
+    review.add("total_load", _close(data["total_load_n"], total), "total load does not equal the sum of loads")
+    review.add("force_equilibrium", _close(left + right, total), "support reactions do not balance loads")
+    review.add("moment_equilibrium_a", _close(right * span, math.fsum(
+        item["load_n"] * item["position_mm"] for item in loads)), "moment equilibrium about A failed")
+    review.add("moment_equilibrium_b", _close(left * span, math.fsum(
+        item["load_n"] * (span - item["position_mm"]) for item in loads)),
+        "moment equilibrium about B failed")
+
+    events = sorted({0.0, span, *(item["position_mm"] for item in loads)})
+    review.add("segment_count", len(segments) == len(events) - 1,
+               "segment count does not match independently reconstructed events")
+
+    def moment_at(x: float) -> float:
+        return math.fsum([left * x] + [
+            -item["load_n"] * max(0, x - item["position_mm"]) for item in loads])
+
+    event_moments = [moment_at(x) for x in events]
+    review.add("support_moments", _moment_close(event_moments[0], 0) and _moment_close(event_moments[-1], 0),
+               "support moments must be zero")
+    for index, segment in enumerate(segments):
+        if index >= len(events) - 1:
+            break
+        start, end = events[index:index + 2]
+        boundary = _close(segment["x_start_mm"], start) and _close(segment["x_end_mm"], end)
+        review.add(f"segment_{index}_boundary", boundary, "segment boundary does not match load events")
+        shear = left - math.fsum(item["load_n"] for item in loads
+                                 if item["position_mm"] <= start)
+        review.add(f"segment_{index}_shear", _close(segment["shear_n"], shear),
+                   "segment shear does not match left-side load sum")
+        review.add(f"segment_{index}_moment_start",
+                   _moment_close(segment["moment_start_nmm"], event_moments[index]),
+                   "segment start moment is inconsistent")
+        review.add(f"segment_{index}_moment_end",
+                   _moment_close(segment["moment_end_nmm"], event_moments[index + 1]),
+                   "segment end moment is inconsistent")
+        review.add(f"segment_{index}_moment_slope", _moment_close(
+            segment["moment_end_nmm"], segment["moment_start_nmm"]
+            + segment["shear_n"] * (end - start)), "dM/dx = V check failed")
+        if index:
+            review.add(f"segment_{index}_continuity", _moment_close(
+                segments[index - 1]["moment_end_nmm"], segment["moment_start_nmm"]),
+                "bending moment jumps between segments")
+
+    maximum = max(event_moments)
+    review.add("maximum_moment", _close(data["max_bending_moment_nmm"], maximum),
+               "maximum bending moment is inconsistent with event moments")
+    review.add("moment_units", _close(data["max_bending_moment_nm"], maximum / 1000),
+               "N*mm to N*m conversion failed")
+    expected_regions = []
+    for index, (position, moment) in enumerate(zip(events, event_moments)):
+        if not _close(moment, maximum):
+            continue
+        end = position
+        if index + 1 < len(events) and _close(event_moments[index + 1], maximum):
+            shear = left - math.fsum(item["load_n"] for item in loads
+                                     if item["position_mm"] <= position)
+            if _close(shear, 0):
+                end = events[index + 1]
+        if expected_regions and _close(expected_regions[-1][1], position):
+            expected_regions[-1] = (expected_regions[-1][0], end)
+        else:
+            expected_regions.append((position, end))
+    region_valid = len(regions) == len(expected_regions)
+    for index, region in enumerate(regions):
+        start, end = region["x_start_mm"], region["x_end_mm"]
+        region_valid = region_valid and 0 <= start <= end <= span
+        if index:
+            region_valid = region_valid and regions[index - 1]["x_end_mm"] < start
+        if index < len(expected_regions):
+            expected_start, expected_end = expected_regions[index]
+            region_valid = region_valid and _close(start, expected_start) and _close(end, expected_end)
+    review.add("max_moment_regions", region_valid,
+               "maximum moment regions do not match event peaks or zero-shear plateaus")
+
+
 VERIFIERS = {
     "transmitted_torque_v1": _torque,
     "solid_shaft_pure_torsion_v1": _pure,
     "solid_shaft_combined_tresca_v1": _combined,
     "simply_supported_point_load_v1": _statics,
+    "simply_supported_multi_point_load_v1": _multi_statics,
 }
 
 
@@ -188,6 +304,9 @@ def review_engineering_result(result: dict) -> ReviewResult:
     review.add("model_registered", True, f"registered model_id: {model_id}")
     module, function, numeric, metadata = CONTRACTS[model_id]
     missing = [name for name in (*numeric, *metadata) if name not in result]
+    if model_id == "simply_supported_multi_point_load_v1":
+        missing.extend(name for name in ("loads", "segments", "max_moment_regions")
+                       if name not in result)
     review.add("required_fields", not missing,
                "missing required fields: " + ", ".join(missing) if missing
                else "required fields present")

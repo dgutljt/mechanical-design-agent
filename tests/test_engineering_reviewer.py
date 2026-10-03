@@ -12,6 +12,9 @@ from mechanical_agent.calculators.torque import calculate_transmitted_torque
 from mechanical_agent.calculators.shaft_torsion import calculate_solid_shaft_min_diameter
 from mechanical_agent.calculators.shaft_combined import calculate_solid_shaft_min_diameter_combined
 from mechanical_agent.calculators.shaft_statics import calculate_simply_supported_point_load
+from mechanical_agent.calculators.shaft_statics_multi import (
+    PointLoad, calculate_simply_supported_point_loads,
+)
 from mechanical_agent.review import ReviewResult, review_engineering_result
 
 
@@ -31,7 +34,13 @@ def statics_result():
     return asdict(calculate_simply_supported_point_load(1000, 400, 150))
 
 
-@pytest.mark.parametrize("factory", [torque_result, pure_result, combined_result, statics_result])
+def multi_result():
+    return asdict(calculate_simply_supported_point_loads(
+        600, [PointLoad(1000, 200), PointLoad(500, 450)]))
+
+
+@pytest.mark.parametrize("factory", [torque_result, pure_result, combined_result,
+                                      statics_result, multi_result])
 def test_real_calculator_result_passes(factory):
     review = review_engineering_result(factory())
     assert isinstance(review, ReviewResult)
@@ -195,4 +204,79 @@ def test_real_statics_cli_pipeline():
         [sys.executable, "-m", "mechanical_agent.review.engineering_result"],
         input=calculator.stdout, capture_output=True, text=True)
     assert reviewer.returncode == 0
+    assert json.loads(reviewer.stdout)["status"] == "PASS"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("reaction_a_n", 800), ("total_load_n", 1400),
+    ("max_bending_moment_nmm", 150000), ("max_bending_moment_nm", 150),
+    ("model_id", "simply_supported_point_load_v1"),
+])
+def test_multi_top_level_tampering_fails(field, value):
+    result = multi_result()
+    result[field] = value
+    assert review_engineering_result(result).status == "FAIL"
+
+
+@pytest.mark.parametrize("path,value", [
+    (("loads", 0, "position_mm"), 210),
+    (("segments", 0, "shear_n"), 900),
+    (("segments", 0, "moment_start_nmm"), 100),
+    (("segments", 0, "moment_end_nmm"), 100),
+    (("segments", 0, "x_end_mm"), 210),
+])
+def test_multi_nested_tampering_fails(path, value):
+    result = multi_result()
+    group, index, field = path
+    result[group][index][field] = value
+    assert review_engineering_result(result).status == "FAIL"
+
+
+def test_multi_plateau_region_tamper_fails():
+    result = asdict(calculate_simply_supported_point_loads(
+        600, [PointLoad(1000, 150), PointLoad(1000, 450)]))
+    assert review_engineering_result(result).status == "PASS"
+    assert result["max_moment_regions"] == [{"x_start_mm": 150.0, "x_end_mm": 450.0}]
+    result["max_moment_regions"][0]["x_end_mm"] = 150
+    assert review_engineering_result(result).status == "FAIL"
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda result: result["loads"].reverse(),
+    lambda result: result["loads"][0].update(load_n=-1),
+    lambda result: result["loads"][0].update(position_mm=True),
+    lambda result: result["segments"][0].update(shear_n="bad"),
+    lambda result: result["max_moment_regions"].append(result["max_moment_regions"][0].copy()),
+])
+def test_multi_invalid_nested_structure_or_order_fails(mutation):
+    result = multi_result()
+    mutation(result)
+    assert review_engineering_result(result).status == "FAIL"
+
+
+def test_multi_support_load_and_coincident_loads_pass():
+    result = asdict(calculate_simply_supported_point_loads(400, [
+        PointLoad(100, 0), PointLoad(200, 150), PointLoad(300, 150), PointLoad(50, 400)]))
+    assert review_engineering_result(result).status == "PASS"
+
+
+def test_single_load_cross_model_review():
+    old = statics_result()
+    new = asdict(calculate_simply_supported_point_loads(400, [PointLoad(1000, 150)]))
+    assert review_engineering_result(old).status == "PASS"
+    assert review_engineering_result(new).status == "PASS"
+    assert old["model_id"] != new["model_id"]
+    for field in ("reaction_a_n", "reaction_b_n", "max_bending_moment_nmm"):
+        assert old[field] == new[field]
+
+
+def test_real_multi_statics_cli_pipeline():
+    calculator = subprocess.run(
+        [sys.executable, "-m", "mechanical_agent.calculators.shaft_statics_multi",
+         "--span-mm", "600", "--load", "1000@200", "--load", "500@450"],
+        capture_output=True, text=True, check=True)
+    reviewer = subprocess.run(
+        [sys.executable, "-m", "mechanical_agent.review.engineering_result"],
+        input=calculator.stdout, capture_output=True, text=True)
+    assert reviewer.returncode == 0, reviewer.stdout
     assert json.loads(reviewer.stdout)["status"] == "PASS"

@@ -8,6 +8,7 @@ user-invocable: true
 # Shaft Point Load Statics
 
 Use only for two ideal simple supports, one transverse point load, one plane, and static loading. Reject multiple loads, distributed loads, overhung shafts, gear-force decomposition, two-plane loading, dynamic loading, and deflection. State clearly that the current Skill supports only one point load; never combine two loads or silently discard one.
+For a distributed-load request, state that only discrete point loads are supported and stop. Do not offer an unreviewed distributed-load equation or design value as a substitute.
 
 ## Calculator and Reviewer Gate
 

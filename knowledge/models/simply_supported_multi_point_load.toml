@@ -1,0 +1,15 @@
+model_id = "simply_supported_multi_point_load_v1"
+title = "Simply supported shaft or beam with same-direction transverse point loads"
+status = "validated calculator model"
+calculator_module = "mechanical_agent.calculators.shaft_statics_multi"
+calculator_function = "calculate_simply_supported_point_loads"
+dsh_skill = "shaft-multi-point-load-statics"
+purpose = "Determine support reactions, piecewise shear/bending-moment data, and maximum bending-moment regions for a simply supported shaft/beam under multiple same-direction transverse point loads."
+equation = "RB = sum(Fi*xi)/L; RA = sum(Fi)-RB; V between events = RA-sum(Fi left of interval); M(x) = RA*x-sum(Fi*max(0,x-xi)); dM/dx = V"
+derivation = "The public source supports static force and moment equilibrium and internal shear/bending-moment methodology. This project extends those relations algebraically to multiple same-direction point loads and implements discrete events and segments. The source does not specify this JSON schema or algorithm. For this loading class the maximum is at an event or over a zero-shear interval."
+inputs = ["span_mm", "loads: load_n and position_mm"]
+outputs = ["total_load_n", "reaction_a_n", "reaction_b_n", "segments", "max_bending_moment_nmm", "max_bending_moment_nm", "max_moment_regions"]
+units = ["loads and reactions: N", "span and positions: mm", "internal bending moments: N*mm", "reported converted maximum: N*m"]
+assumptions = ["Two ideal simple supports at x = 0 and x = L.", "One plane and static loading.", "Non-negative same-direction transverse point loads.", "Loads lie on or between the supports; coincident loads remain separate inputs."]
+limitations = ["No signed or opposite-direction loads, distributed loads, applied couples, overhung loads, two-plane loading, or dynamics.", "No deflection or bearing-stiffness calculation.", "Shaft self-weight is excluded unless explicitly represented as point loads; this approximation is not recommended by this model.", "Not a general beam or shaft solver."]
+source_ids = ["engineering_statics_beam_equilibrium"]
