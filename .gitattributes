@@ -4,3 +4,4 @@
 *.yml text eol=lf
 *.yaml text eol=lf
 *.toml text eol=lf
+examples/v1-shaft-analysis/expected/* text eol=lf
