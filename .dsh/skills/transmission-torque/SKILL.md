@@ -13,6 +13,8 @@ Calculate steady transmitted torque from mechanical power P and rotational speed
 
 ## Mandatory deterministic calculation
 
+For a complete supported numerical shaft-strength request that supplies power, speed, simple-support span, at least two same-direction point loads, and allowable shear stress, call the registered `analyze_verified_shaft_strength` Native Tool once when available. Pass only `power_kw`, `speed_rpm`, `span_mm`, `loads` (`load_n`, `position_mm`), and `allowable_shear_mpa`. The Tool runs both calculators, all three Reviewers, the existing verified handoff, and Registry resolution. Do not run the separate torque/statics/combined CLI chain or supply intermediate torque or bending moment to any Tool. The CLI instructions below cover standalone torque, requests that need diagram/report artifacts, or environments without the Native Tool.
+
 Never compute the final numerical torque in the language model. From the project root, call the existing Python CLI:
 
 ```powershell
