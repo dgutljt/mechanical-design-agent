@@ -1,158 +1,178 @@
 # Mechanical Design Agent
 
-An experimental mechanical engineering agent built with DeepSeek Harness and deterministic engineering calculation tools.
+A deterministic, review-gated mechanical engineering agent built on DeepSeek Harness.
 
-**Status: V0.3 Prototype — deterministic torque, point-load statics, and theoretical shaft sizing workflows validated.**
+The LLM understands requests and orchestrates tools; deterministic Python performs the engineering calculations. Reviewer gates validate supported results, a provenance registry links each model to its assumptions and sources, and Verified Handoff preserves exact numerical lineage in the supported calculator chain. **The LLM is not the numerical authority.** This is an experimental engineering agent, not a general shaft design system.
 
-## Current capabilities
+## How It Works
 
-V0.3 supports:
-
-- Deterministic transmitted torque calculation from power and rotational speed.
-- Theoretical minimum diameter of a solid circular shaft under pure steady torsion from torque and allowable shear stress.
-- Combined bending and torsion theoretical sizing using the maximum shear stress criterion.
-- Static reaction and maximum bending-moment analysis for a simply supported shaft with one transverse point load (one plane; no distributed or dynamic loading).
-- Deterministic statics for multiple same-direction transverse point loads, including piecewise shear/bending-moment data and maximum-moment plateau detection (one plane, point loads only).
-- Optional deterministic SVG shear-force and bending-moment diagrams from reviewed multi-load statics segment data.
-- Reviewed multi-load statics maximum moment can feed combined bending-torsion strength sizing after both torque and statics results pass review.
-- Cross-calculator torque/statics → combined-strength chaining uses a deterministic verified handoff so upstream engineering values are taken directly from reviewed calculator JSON rather than retyped by the LLM.
-- Machine-readable JSON calculator outputs.
-- Each calculator output includes a stable `model_id`.
-- Machine-readable engineering model provenance registry.
-- Runtime model provenance is resolved deterministically from calculator model IDs to Engineering Model Cards and registered sources.
-- Deterministic engineering result reviewer with inverse, equilibrium, and consistency checks across five registered engineering models.
-- Engineering calculator outputs are gated by the deterministic reviewer before the DSH agent accepts them.
-- Registered source attribution distinguishes underlying relations from project derivations and approximations.
-- DeepSeek Harness project Skills for transmitted torque, single and multiple point-load statics, pure-torsion solid-shaft sizing, and combined bending-torsion sizing.
-- A combined bending and torsion DSH Skill with load-state-aware selection between pure-torsion and combined strength models.
-- Automatic natural-language Skill discovery and multi-Skill chaining: power and speed → torque → theoretical minimum shaft diameter.
-- Calculator JSON is the sole numerical authority; the Skills prohibit Agent-side recalculation, substitution, and rounding of results.
-- Torque → combined shaft sizing chaining when power, speed, and bending moment are provided.
-- Load → statics → combined-strength chaining, with every calculator result gated by the deterministic reviewer.
-- Unambiguous unit conversion before calculation; ambiguous or missing parameters require clarification.
-- Scope-boundary protection for unsupported analyses and invalid-input rejection, including zero rotational speed.
-- Pytest regression tests.
-
-The pure-torsion and combined bending-torsion calculators return theoretical minimum diameters for a solid circular shaft under steady loading. The agent now selects between pure-torsion and combined bending-torsion models based on the stated load condition.
-
-This is not a general beam or shaft solver or a complete shaft-design system. Neither strength model accounts for fatigue, alternating loads, stress concentrations, shoulders, keyways, shock/dynamic effects, stiffness, deflection, critical speed, or standard preferred diameters. Final shaft sizing, bearing selection, CAD/CAE integration, reviewer agents, and multi-agent workflows are not implemented.
-
-## Architecture
-
-```text
-User request
-    ↓
-DeepSeek Harness
-    ↓
-transmission-torque Skill → torque calculator → JSON torque_nm (when power and speed are given)
-shaft-point-load-statics Skill → statics calculator → JSON reactions and max_bending_moment_nm (when one transverse point load is given)
-shaft-multi-point-load-statics Skill → multi statics calculator → JSON reactions, segments, max moment and regions (when multiple same-direction point loads are given)
-    ↓ (select from the stated load condition)
-solid-shaft-torsion Skill → shaft_torsion calculator → JSON min_diameter_mm (pure torsion)
-combined-shaft-loading Skill → shaft_combined calculator → JSON min_diameter_mm (bending present)
-    ↓
-Natural-language explanation
+```mermaid
+flowchart LR
+    U[User] --> D[DSH / LLM orchestration]
+    D --> C[Deterministic calculators]
+    C --> R[Reviewer gate]
+    R --> P[Provenance resolver]
+    R --> H[Verified Handoff for supported chain]
+    H --> P
+    R --> V[SVG renderer for reviewed multi-point statics]
+    H --> Q[HTML report builder]
+    P --> Q
+    V --> Q
+    Q --> U
+    R --> U
 ```
 
-The Agent chooses and sequences independent Skills; deterministic Python calculators perform the engineering arithmetic. For the supported torque + multi-load statics → combined-strength chain, the Agent passes both untouched raw calculator JSON strings to `mechanical_agent.workflows.verified_shaft_strength`. That workflow repeats both upstream Reviewer checks, transfers the exact torque and maximum-moment fields, calls the existing combined calculator, and reviews its result. The provenance resolver uses each calculator's `model_id` to load its Engineering Model Card and registered sources; it does not calculate engineering results. The Skills use calculator JSON for numerical results and resolver JSON for model and source facts.
+Standalone calculations proceed from calculator to Reviewer and provenance. Verified Handoff is used for the supported torque + multi-point statics → combined strength chain. SVG and HTML output are optional presentation stages with narrower input requirements; the report builder requires the complete reviewed chain, provenance, and both SVG diagrams.
 
-Validated multi-point-load statics results can optionally be rendered as deterministic SVG shear-force and bending-moment diagrams after the Reviewer gate passes. Diagrams are presentation artifacts; the renderer does not validate or recompute statics. It currently supports only `simply_supported_multi_point_load_v1`. From the repository root, when diagrams are requested:
+## Design Principles
+
+1. **Calculator JSON is numerical truth.** Engineering numbers come from deterministic Python calculators, never from LLM arithmetic.
+2. **Reviewer is the validation gate.** Deterministic checks independently test equations, equilibrium, input ranges, inverse relations, and result consistency as applicable to each model. A failed result stops the supported workflow.
+3. **Provenance is source truth.** The resolver maps a calculator's `model_id` to an Engineering Model Card and registered sources. It does not calculate results.
+4. **Verified Handoff is lineage truth.** In the supported chain, reviewed upstream JSON is passed directly to a deterministic workflow that transfers exact torque and maximum-moment values into combined sizing and reviews the result.
+5. **The LLM orchestrates.** It identifies the task, selects supported models, invokes tools, and explains reviewed outputs.
+
+## Current Capabilities
+
+| Capability | Status |
+| --- | --- |
+| Transmitted torque from power and speed | Supported |
+| Solid shaft theoretical minimum diameter under pure torsion | Supported |
+| Solid shaft theoretical minimum diameter under combined steady bending and torsion | Supported |
+| Simply supported, single-point shaft statics | Supported |
+| Simply supported, multiple same-direction point-load statics | Supported |
+| Piecewise shear and bending-moment data | Multi-point model |
+| Shear-force and bending-moment SVG diagrams | Reviewed multi-point model |
+| Engineering Model Cards and provenance resolver | Five registered models |
+| Deterministic engineering Reviewer | Five registered models |
+| Verified cross-calculator handoff | Torque + multi-point statics → combined sizing |
+| Deterministic HTML engineering report | Complete supported multi-point shaft chain |
+| DSH Skills and headless orchestration | Project Skills provided; headless workflow validated during V1 development |
+
+### Supported Engineering Models
+
+| `model_id` | Purpose |
+| --- | --- |
+| `transmitted_torque_v1` | Torque from power and rotational speed |
+| `solid_shaft_pure_torsion_v1` | Theoretical solid-shaft diameter under pure torsion |
+| `solid_shaft_combined_tresca_v1` | Theoretical solid-shaft diameter under steady bending and torsion |
+| `simply_supported_point_load_v1` | Reactions and maximum moment for one transverse point load |
+| `simply_supported_multi_point_load_v1` | Reactions and piecewise shear/moment for multiple transverse point loads |
+
+The detailed assumptions and source relationships are in [Engineering Model Cards](knowledge/models/) and the [source registry](knowledge/sources.toml).
+
+## End-to-End Example
+
+For **5.5 kW** at **960 rpm**, a **600 mm** simply supported span with **1000 N at 200 mm** and **500 N at 450 mm**, and **40 MPa** allowable shear stress, the verified workflow yields:
+
+| Reviewed output | Value |
+| --- | --- |
+| Transmitted torque `T` | `54.713541666666664 N·m` |
+| Left reaction `RA` | `791.6666666666667 N` |
+| Right reaction `RB` | `708.3333333333333 N` |
+| Maximum bending moment `Mmax` | `158.33333333333334 N·m` |
+| Theoretical minimum diameter `d_min` | `27.732717671613003 mm` |
+
+The same reviewed multi-point statics data can produce shear-force and bending-moment SVGs. The complete chain can also produce a deterministic, single-file HTML engineering report with those diagrams. The diameter is a theoretical strength result, not a selected production diameter.
+
+## Reproducible V1 Demo
+
+See [examples/v1-shaft-analysis/](examples/v1-shaft-analysis/) for a runnable and byte-verifiable example. This example reproduces the V1 end-to-end shaft-analysis workflow without requiring an LLM or DSH session.
+
+## Why the Results Are Not Calculated by the LLM
+
+The LLM chooses and sequences the tools and explains their results. Python calculators compute engineering values; the Reviewer checks them; the provenance resolver identifies each model's assumptions and sources. During development, a chained LLM run introduced an incorrect intermediate bending moment while the downstream calculator remained internally consistent. Verified Handoff was added so the LLM does not manually retype upstream engineering values into downstream calculators. This layer applies to the supported torque + multi-point statics → combined sizing chain.
+
+## Setup and Quick Start
+
+The project requires Python 3.12 or later. The development and current acceptance environment used **Python 3.12**, **Node.js 24**, **DeepSeek Harness 0.2.0-rc.2**, and **Windows**. The package is configured for an editable source install; it is not published as a release package.
+
+Create and activate a Python 3.12 environment first; [environment.yml](environment.yml) provides a Conda specification. Then, from the repository root, install the source package:
 
 ```powershell
-$result = python -m mechanical_agent.calculators.shaft_statics_multi --span-mm 600 --load "1000@200" --load "500@450"
-$review = $result | python -m mechanical_agent.review.engineering_result
-if ($LASTEXITCODE -ne 0 -or ($review | ConvertFrom-Json).status -ne "PASS") { throw "statics review did not pass" }
-$result | python -m mechanical_agent.presentation.shaft_diagrams --output-dir "artifacts/generated/shaft-diagrams"
-```
-
-The renderer writes `shear_force_diagram.svg` and `bending_moment_diagram.svg` to the project-local generated directory and prints a JSON presentation manifest. `artifacts/generated/` is ignored by Git. Engineering values still come from the calculator JSON.
-
-## Setup
-
-From the repository root, create and activate the Conda environment, then install the package:
-
-```powershell
-conda env create -f environment.yml
-conda activate mech-agent
 python -m pip install -e .
 ```
 
-Start DeepSeek Harness from the repository root so it can discover the project Skill.
-
-## First Example
-
-Run the calculator directly:
+Run a torque calculation:
 
 ```powershell
 python -m mechanical_agent.calculators.torque --power-kw 5.5 --speed-rpm 960
 ```
 
-Example JSON output:
+Run multi-point statics and review the original calculator JSON:
 
-```json
-{
-  "model_id": "transmitted_torque_v1",
-  "power_kw": 5.5,
-  "speed_rpm": 960.0,
-  "torque_nm": 54.713541666666664,
-  "formula": "T = 9550 * P / n",
-  "constant": 9550.0
-}
+```powershell
+$statics = python -m mechanical_agent.calculators.shaft_statics_multi --span-mm 600 --load "1000@200" --load "500@450"
+$review = $statics | python -m mechanical_agent.review.engineering_result
+if ($LASTEXITCODE -ne 0 -or ($review | ConvertFrom-Json).status -ne "PASS") { throw "statics review failed" }
+$statics
 ```
 
-In DeepSeek Harness, the same workflow can start from a natural-language request:
+Each calculator prints machine-readable JSON with a `model_id`. The Reviewer prints JSON containing `status` and individual checks. For the full chained workflow, see the contracts in [.dsh/skills/](.dsh/skills/); the handoff implementation is in [src/mechanical_agent/workflows/](src/mechanical_agent/workflows/).
 
-> 一台机械传动系统输入功率为 5.5 kW，转速为 960 r/min，请求出传递转矩。
+## Using with DeepSeek Harness
 
-The torque calculator uses `T = 9550 × P / n`, with `P` in kW, `n` in r/min, and `T` in N·m. The constant 9550 is the project's engineering approximation.
+The five project Skills in [.dsh/skills/](.dsh/skills/) define orchestration contracts:
+
+- `transmission-torque`
+- `solid-shaft-torsion`
+- `combined-shaft-loading`
+- `shaft-point-load-statics`
+- `shaft-multi-point-load-statics`
+
+From the repository root, a headless invocation with the validated DSH version is:
+
+```powershell
+npx.cmd --yes @deepseek-ai/dsh --profile headless --json "Calculate transmitted torque for 5.5 kW at 960 rpm."
+```
+
+The DSH session requires its normal model/provider configuration. Skill discovery and chaining depend on the request and supported model scope; Skills are orchestration instructions, not numerical engines.
+
+## Tests
+
+The full suite passes **210 tests** (including the reproducible V1 demo checks). From the repository root in PowerShell:
+
+```powershell
+$env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"
+$env:PYTHONPATH="src"
+python -m pytest
+```
+
+The tests live in [tests/](tests/).
 
 ## Project Structure
 
 ```text
 mechanical-design-agent/
-├─ .dsh/skills/
-│  ├─ transmission-torque/SKILL.md
-│  ├─ solid-shaft-torsion/SKILL.md
-│  ├─ combined-shaft-loading/SKILL.md
-│  ├─ shaft-point-load-statics/SKILL.md
-│  └─ shaft-multi-point-load-statics/SKILL.md
-├─ examples/
+├─ .dsh/skills/                 # DSH orchestration contracts
 ├─ knowledge/
-│  ├─ README.md
-│  ├─ sources.toml
-│  └─ models/
-│     ├─ transmitted_torque.toml
-│     ├─ solid_shaft_pure_torsion.toml
-│     ├─ solid_shaft_combined_tresca.toml
-│     ├─ simply_supported_point_load.toml
-│     └─ simply_supported_multi_point_load.toml
-├─ outputs/
+│  ├─ models/                  # Engineering Model Cards
+│  └─ sources.toml             # Registered references
 ├─ src/mechanical_agent/
-│  ├─ __init__.py
-│  ├─ knowledge_registry.py
-│  └─ calculators/
-│     ├─ __init__.py
-│     ├─ torque.py
-│     ├─ shaft_torsion.py
-│     ├─ shaft_combined.py
-│     ├─ shaft_statics.py
-│     └─ shaft_statics_multi.py
-├─ tests/
-│  ├─ test_torque.py
-│  ├─ test_shaft_torsion.py
-│  ├─ test_shaft_combined.py
-│  └─ test_knowledge_registry.py
-├─ .gitattributes
-├─ .gitignore
+│  ├─ calculators/             # Deterministic engineering arithmetic
+│  ├─ review/                  # Result validation
+│  ├─ workflows/               # Verified cross-calculator handoff
+│  ├─ presentation/            # SVG diagrams
+│  └─ reporting/               # HTML report
+├─ tests/                      # Regression and contract tests
 ├─ environment.yml
-├─ pyproject.toml
-└─ README.md
+└─ pyproject.toml
 ```
 
-## Deterministic HTML engineering report
+## Current Limitations
 
-The report builder generates a deterministic single-file HTML engineering analysis report from validated calculation, provenance, verified handoff, and SVG artifacts. It supports the complete multi-point shaft workflow: `transmitted_torque_v1` → `simply_supported_multi_point_load_v1` → `solid_shaft_combined_tresca_v1`.
+- Shaft diameters are theoretical minima under implemented steady-load assumptions. There is no final production diameter selection, material database, fatigue analysis, stress-concentration treatment, keyway or shoulder effects, stiffness/deflection analysis, or critical-speed analysis.
+- Statics is limited to ideal simple supports, one plane, and same-direction transverse point loads within the supports. Distributed loads, overhung loads, opposite-direction or signed point loads, applied couples, two-plane bending, and bearing selection are unsupported.
+- CAD/CATIA and CAE integration are not implemented. The report output is HTML; PDF output is not implemented.
+- SVG rendering is integrated only for the multi-point statics model. The full HTML report requires the supported torque + multi-point statics + combined strength chain.
 
-`build_shaft_analysis_report` in `mechanical_agent.reporting.shaft_analysis_report` checks model identities, Reviewer statuses, exact handoff lineage, and SVG renderer identity before writing. It does not recompute engineering results. The HTML inlines both SVG diagrams and contains full precision JSON metadata; human-readable display values may be rounded. Output is HTML only. The DSH agent can optionally produce this deterministic HTML engineering analysis report when explicitly requested for the validated multi-point shaft workflow. Report generation is conditional and occurs only after the engineering validation gates pass; the current full report scope is this multi-point shaft workflow.
+## Roadmap
 
-The optional CLI accepts `--input-manifest` and `--output`. The manifest maps `torque_result`, `statics_result`, `verified_strength_result`, `torque_provenance`, `statics_provenance`, `combined_provenance`, and `diagram_artifacts` to files produced by the deterministic pipeline. Relative paths are resolved against the manifest directory. It contains file references, not copied engineering values.
+| Stage | Scope |
+| --- | --- |
+| **V1 · Current** | Deterministic shaft-analysis workflow, Reviewer, provenance, SVG diagrams, HTML report |
+| **V1.5** | Native DSH mechanical plugin and typed tools |
+| **V2** | CATIA parameterized shaft generation |
+| **V3** | CAE verification and theory-versus-FEA comparison |
+
+This project is an educational and experimental engineering tool. Current outputs are theoretical results under explicitly implemented assumptions and are not a substitute for final engineering design review.

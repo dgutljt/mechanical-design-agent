@@ -1,0 +1,8 @@
+{
+  "torque_nm": 54.713541666666664,
+  "reaction_a_n": 791.6666666666667,
+  "reaction_b_n": 708.3333333333333,
+  "max_bending_moment_nm": 158.33333333333334,
+  "max_moment_regions": [{"x_start_mm": 200.0, "x_end_mm": 200.0}],
+  "min_diameter_mm": 27.732717671613003
+}

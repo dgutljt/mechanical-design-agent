@@ -40,6 +40,7 @@ yarn-error.log*
 outputs/*
 !outputs/.gitkeep
 artifacts/generated/
+examples/v1-shaft-analysis/generated/
 
 # Windows
 Thumbs.db

@@ -1,0 +1,10 @@
+{
+  "power_kw": 5.5,
+  "speed_rpm": 960,
+  "span_mm": 600.0,
+  "loads": [
+    {"load_n": 1000.0, "position_mm": 200.0},
+    {"load_n": 500.0, "position_mm": 450.0}
+  ],
+  "allowable_shear_mpa": 40.0
+}
