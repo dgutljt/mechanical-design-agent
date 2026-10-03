@@ -148,3 +148,11 @@ mechanical-design-agent/
 ├─ pyproject.toml
 └─ README.md
 ```
+
+## Deterministic HTML engineering report
+
+The report builder generates a deterministic single-file HTML engineering analysis report from validated calculation, provenance, verified handoff, and SVG artifacts. It supports the complete multi-point shaft workflow: `transmitted_torque_v1` → `simply_supported_multi_point_load_v1` → `solid_shaft_combined_tresca_v1`.
+
+`build_shaft_analysis_report` in `mechanical_agent.reporting.shaft_analysis_report` checks model identities, Reviewer statuses, exact handoff lineage, and SVG renderer identity before writing. It does not recompute engineering results. The HTML inlines both SVG diagrams and contains full precision JSON metadata; human-readable display values may be rounded. Output is HTML only. The DSH agent can optionally produce this deterministic HTML engineering analysis report when explicitly requested for the validated multi-point shaft workflow. Report generation is conditional and occurs only after the engineering validation gates pass; the current full report scope is this multi-point shaft workflow.
+
+The optional CLI accepts `--input-manifest` and `--output`. The manifest maps `torque_result`, `statics_result`, `verified_strength_result`, `torque_provenance`, `statics_provenance`, `combined_provenance`, and `diagram_artifacts` to files produced by the deterministic pipeline. Relative paths are resolved against the manifest directory. It contains file references, not copied engineering values.

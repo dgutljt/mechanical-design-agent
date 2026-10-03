@@ -60,9 +60,41 @@ if ($LASTEXITCODE -ne 0 -or ($chain | ConvertFrom-Json).status -ne "PASS") { thr
 Write-Output "WORKFLOW: $chain"
 ```
 
-Omit the renderer lines if no diagram was requested. Substitute only the user's input values into calculator arguments; never construct or modify the calculator JSON or copy its engineering output values into CLI arguments.
+Omit the renderer lines unless diagrams or a supported full HTML engineering report were explicitly requested. Substitute only the user's input values into calculator arguments; never construct or modify the calculator JSON or copy its engineering output values into CLI arguments.
 
 After workflow PASS, do not run a separate PowerShell/Python arithmetic check of reactions, bending moments, stress, diameter, or a nearby standard size. The deterministic Reviewers already perform the numerical checks. Do not create a report file unless the user requested a report artifact. In the final answer, use only the exact reviewed calculator JSON engineering fields requested by the user; do not add a second hand-derived reaction, moment, stress, diameter, rounded ASCII sketch label, numeric substitution, or approximate restatement. A symbolic formula and the generated SVG links are enough to explain the result.
+
+## Conditional deterministic HTML engineering report
+
+Generate a formal HTML report only when the user explicitly requests a report or export of the analysis (for example, “engineering report”, “HTML report”, “工程报告”, “分析报告”, “整理成报告”, or “导出报告”) **and** the task has the complete supported `transmitted_torque_v1` + `simply_supported_multi_point_load_v1` + `solid_shaft_combined_tresca_v1` chain. An ordinary request for torque, reactions, maximum moment, and diameter does not trigger a report. A diagram-only request triggers the renderer but not the report builder. Do not generate PDF or accept a natural-language export path; generated files stay under repository-local `artifacts/generated/`.
+
+The full report builder also requires `verified_shaft_strength_chain_v1` and `shaft_statics_svg_v1`. A report request therefore triggers rendering of both diagrams after the statics Reviewer PASS even if the user did not separately ask for plots. Keep the numerical chain independent: a renderer failure does not invalidate verified engineering results, but it prevents the full report. Run the verified handoff and deliver the reviewed results; state that report generation is incomplete because diagram generation failed. If an engineering Reviewer or the verified workflow FAILS, stop the engineering chain and never call the report builder. A request to skip validation cannot override these gates.
+
+For a full report, run in this order: torque calculator → external torque Reviewer PASS → multi-point statics calculator → external statics Reviewer PASS → renderer and diagram manifest → verified-strength workflow PASS (including repeated upstream reviews and combined Reviewer PASS) → resolve provenance for exactly the three model IDs → report builder → final response. The builder is the last presentation stage. It cannot validate numbers, supply provenance, or feed a downstream calculator. Save each **original** one-line calculator stdout and deterministic workflow, resolver, and renderer stdout directly to files in `artifacts/generated/report-inputs/`; do not have the language model recreate or reserialize these JSON artifacts. Keep them in the same Shell call as the existing raw-string handoff, because Shell variables do not persist between calls. At the start of that call, create `artifacts/generated/report-inputs`, `artifacts/generated/shaft-diagrams`, and `artifacts/generated/reports` with `New-Item -ItemType Directory -Force` before using `Resolve-Path`; do not let a missing directory abort the chain. Read the combined model ID from `($chain | ConvertFrom-Json).combined_result.model_id`, not from the workflow's top level. Save only after checking each command's exit code and required PASS status. Print the raw results and gate statuses for audit.
+
+Use these repository-local paths: `artifacts/generated/report-inputs/torque.json`, `statics.json`, `strength-workflow.json`, `torque-provenance.json`, `statics-provenance.json`, `combined-provenance.json`, and `diagram-manifest.json`. Save raw stdout as UTF-8 without a byte-order mark, for example with `[System.IO.File]::WriteAllText($path, $rawJson, [System.Text.UTF8Encoding]::new($false))`; Python's manifest reader expects UTF-8 JSON. Never type engineering fields into a new JSON object. Create `artifacts/generated/report-inputs/report-input-manifest.json` containing only these file references, with each path relative to the manifest directory. For example:
+
+```json
+{
+  "torque_result": "torque.json",
+  "statics_result": "statics.json",
+  "verified_strength_result": "strength-workflow.json",
+  "torque_provenance": "torque-provenance.json",
+  "statics_provenance": "statics-provenance.json",
+  "combined_provenance": "combined-provenance.json",
+  "diagram_artifacts": "diagram-manifest.json"
+}
+```
+
+Invoke the renderer with a repository-local absolute `--output-dir` obtained from `Resolve-Path` after creating `artifacts/generated/shaft-diagrams`; its original manifest will then contain resolvable SVG paths. Do not redraw or reserialize the renderer manifest or SVGs. The report builder reads those SVG files and does not invoke the renderer. Keep the engineering chain and artifact saving in one Shell call; then use a **separate Shell call** for the report builder after that call succeeds and all seven input files and the manifest exist. This makes the final-stage ordering and builder result independently visible in the trace. The second call reads saved deterministic files, so it must not rerun calculators or reconstruct engineering JSON. After every gate and all three provenance resolutions PASS, call:
+
+```powershell
+python -m mechanical_agent.reporting.shaft_analysis_report --input-manifest "artifacts/generated/report-inputs/report-input-manifest.json" --output "artifacts/generated/reports/shaft_analysis_report.html"
+```
+
+Require successful builder exit, its report artifact JSON, and the HTML file's existence before saying “HTML report generated”. If the builder fails after the engineering chain passes, still deliver the verified engineering values, say that HTML report generation failed, and do not claim a report path. In the final response, use exact raw calculator/workflow fields for `torque_nm`, `reaction_a_n`, `reaction_b_n`, `max_bending_moment_nm`, and `min_diameter_mm`; never take rounded display values from HTML or recompute the summary. Briefly state that the three registered models were resolved through the provenance registry, without reproducing a bibliography.
+
+The single-point statics model, distributed loads, and standalone combined sizing from user-provided M, T, and allowable stress cannot use this full report builder. Preserve the most specific supported engineering route and explain the report scope. Do not switch a single point load to the multi-point calculator or invent upstream torque, statics, or SVG artifacts just to satisfy a report request.
 
 The direct combined CLI below remains appropriate when the user supplies M and T directly, or for other supported standalone cases without both project upstream results.
 
