@@ -21,3 +21,14 @@ section = "10.3 Loadings on Circular Transmission Shafting; 10.4 Analysis of Com
 url = "https://engineeringlibrary.org/reference/shaft-analysis-air-force-stress-manual"
 supports = ["torsional surface shear stress T*r/J", "bending normal stress M*r/I", "combined maximum shear stress sqrt(tau^2 + (sigma/2)^2)", "shaft design procedure and limitations"]
 notes = "October 1986 historical manual reproduced publicly; an engineering reference for the model, not a current international standard. Solid-shaft coefficients and minimum-diameter formulas are algebraic consequences of its stress relations and circular-section properties."
+
+[[sources]]
+id = "engineering_statics_beam_equilibrium"
+title = "Engineering Statics: Open and Interactive"
+organization_or_author = "Engineering Statics: Open and Interactive"
+source_type = "open educational resource"
+host = "engineeringstatics.org"
+section = "Free-Body Diagrams; Equilibrium Examples; Internal Forces at a Point"
+url = "https://engineeringstatics.org/"
+supports = ["free-body diagram approach", "static force equilibrium", "static moment equilibrium", "support reaction determination", "internal shear and bending-moment analysis of simply supported beams"]
+notes = "The project's RA, RB, and Mmax equations for its one-load geometry are derived algebraically for this project model from the cited equilibrium relations; they are not attributed as verbatim source formulas."

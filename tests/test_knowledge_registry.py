@@ -21,6 +21,7 @@ MODEL_FILES = {
     "transmitted_torque.toml",
     "solid_shaft_pure_torsion.toml",
     "solid_shaft_combined_tresca.toml",
+    "simply_supported_point_load.toml",
 }
 CALCULATORS = {
     ("mechanical_agent.calculators.torque", "calculate_transmitted_torque"),
@@ -29,6 +30,7 @@ CALCULATORS = {
         "mechanical_agent.calculators.shaft_combined",
         "calculate_solid_shaft_min_diameter_combined",
     ),
+    ("mechanical_agent.calculators.shaft_statics", "calculate_simply_supported_point_load"),
 }
 REQUIRED_FIELDS = {
     "model_id",
@@ -59,7 +61,7 @@ def test_sources_parse_and_have_unique_ids() -> None:
     assert len(ids) == len(set(ids))
 
 
-def test_all_three_model_cards_parse_and_have_unique_ids() -> None:
+def test_all_four_model_cards_parse_and_have_unique_ids() -> None:
     assert {path.name for path in (KNOWLEDGE / "models").glob("*.toml")} == MODEL_FILES
     model_ids = [card["model_id"] for card in cards()]
     assert len(model_ids) == len(set(model_ids))
@@ -67,6 +69,7 @@ def test_all_three_model_cards_parse_and_have_unique_ids() -> None:
         "transmitted_torque_v1",
         "solid_shaft_pure_torsion_v1",
         "solid_shaft_combined_tresca_v1",
+        "simply_supported_point_load_v1",
     }
 
 
@@ -105,6 +108,12 @@ def test_resolver_returns_only_referenced_sources() -> None:
         assert [source["id"] for source in result["sources"]] == card["source_ids"]
         assert result["sources"]
         assert get_model_card(card["model_id"]) == card
+
+
+def test_statics_provenance_is_scoped_to_its_registered_source() -> None:
+    result = resolve_model_provenance("simply_supported_point_load_v1")
+    assert result["model"]["source_ids"] == ["engineering_statics_beam_equilibrium"]
+    assert [source["id"] for source in result["sources"]] == ["engineering_statics_beam_equilibrium"]
 
 
 def test_unknown_model_is_rejected_without_traceback_by_cli() -> None:

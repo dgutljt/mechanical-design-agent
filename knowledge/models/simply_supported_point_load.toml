@@ -1,0 +1,15 @@
+model_id = "simply_supported_point_load_v1"
+title = "Simply supported shaft or beam with one transverse point load"
+status = "validated calculator model"
+calculator_module = "mechanical_agent.calculators.shaft_statics"
+calculator_function = "calculate_simply_supported_point_load"
+dsh_skill = "shaft-point-load-statics"
+purpose = "Determine support reactions and maximum bending moment for a simply supported shaft/beam with one transverse point load."
+equation = "RA = F*(L-a)/L; RB = F*a/L; RA + RB = F; Mmax = RA*a = F*a*(L-a)/L; x_Mmax = a"
+derivation = "The one-load equations are derived algebraically for this project model from the cited free-body diagram, force equilibrium, moment equilibrium, and internal bending-moment relations; they are not quoted as source equations."
+inputs = ["load_n", "span_mm", "load_position_mm"]
+outputs = ["reaction_a_n", "reaction_b_n", "max_bending_moment_nmm", "max_bending_moment_nm", "max_moment_position_mm"]
+units = ["F: N", "L: mm", "a: mm", "RA/RB: N", "Mmax internal: N*mm", "Mmax output also provided as N*m", "x_Mmax: mm"]
+assumptions = ["Simply supported beam/shaft.", "Pin/roller idealization with supports at x = 0 and x = L.", "One transverse point load.", "One-plane static analysis.", "Load located between or at supports.", "Static equilibrium.", "Negligible support width.", "No distributed load.", "No axial load.", "No applied couple.", "No self-weight.", "No dynamic/inertial effects."]
+limitations = ["This is not general shaft load analysis.", "Does not support multiple point loads, distributed loads, overhung loads, applied couples, two-plane loading, bearing stiffness, or shaft deflection."]
+source_ids = ["engineering_statics_beam_equilibrium"]

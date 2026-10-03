@@ -25,6 +25,11 @@ CONTRACTS = {
         ("bending_moment_nm", "bending_moment_nmm", "torque_nm", "torque_nmm",
          "allowable_shear_mpa", "combined_load_term_nmm", "min_diameter_mm"),
         ("criterion", "formula", "assumptions")),
+    "simply_supported_point_load_v1": (
+        "mechanical_agent.calculators.shaft_statics", "calculate_simply_supported_point_load",
+        ("load_n", "span_mm", "load_position_mm", "reaction_a_n", "reaction_b_n",
+         "max_bending_moment_nmm", "max_bending_moment_nm", "max_moment_position_mm"),
+        ("formula", "assumptions")),
 }
 
 
@@ -132,10 +137,36 @@ def _combined(data: dict, review: ReviewResult) -> None:
                        "min_diameter_mm numerical consistency check failed (inverse Tresca stress)")
 
 
+def _statics(data: dict, review: ReviewResult) -> None:
+    load, span, position = data["load_n"], data["span_mm"], data["load_position_mm"]
+    valid = load >= 0 and span > 0 and 0 <= position <= span
+    review.add("input_ranges", valid,
+               "load_n must be non-negative, span_mm positive, and load_position_mm within span")
+    if not valid:
+        return
+    left, right = data["reaction_a_n"], data["reaction_b_n"]
+    moment = data["max_bending_moment_nmm"]
+    review.add("force_equilibrium", _close(left + right, load),
+               "support reactions do not balance load")
+    review.add("moment_equilibrium_a", _close(right * span, load * position),
+               "moment equilibrium about A failed")
+    review.add("moment_equilibrium_b", _close(left * span, load * (span - position)),
+               "moment equilibrium about B failed")
+    review.add("bending_from_a", _close(moment, left * position),
+               "maximum moment does not match left reaction")
+    review.add("bending_from_b", _close(moment, right * (span - position)),
+               "maximum moment does not match right reaction")
+    review.add("moment_units", _close(data["max_bending_moment_nm"], moment / 1000),
+               "N*mm to N*m conversion failed")
+    review.add("moment_position", _close(data["max_moment_position_mm"], position),
+               "maximum moment position does not match load position")
+
+
 VERIFIERS = {
     "transmitted_torque_v1": _torque,
     "solid_shaft_pure_torsion_v1": _pure,
     "solid_shaft_combined_tresca_v1": _combined,
+    "simply_supported_point_load_v1": _statics,
 }
 
 

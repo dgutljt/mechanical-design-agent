@@ -11,25 +11,27 @@ V0.3 supports:
 - Deterministic transmitted torque calculation from power and rotational speed.
 - Theoretical minimum diameter of a solid circular shaft under pure steady torsion from torque and allowable shear stress.
 - Combined bending and torsion theoretical sizing using the maximum shear stress criterion.
+- Static reaction and maximum bending-moment analysis for a simply supported shaft with one transverse point load (one plane; no distributed or dynamic loading).
 - Machine-readable JSON calculator outputs.
 - Each calculator output includes a stable `model_id`.
 - Machine-readable engineering model provenance registry.
 - Runtime model provenance is resolved deterministically from calculator model IDs to Engineering Model Cards and registered sources.
-- Deterministic engineering result reviewer with inverse and consistency checks. Reviewer V1 currently validates only the three registered engineering models.
+- Deterministic engineering result reviewer with inverse, equilibrium, and consistency checks across four registered engineering models.
 - Engineering calculator outputs are gated by the deterministic reviewer before the DSH agent accepts them.
 - Registered source attribution distinguishes underlying relations from project derivations and approximations.
-- DeepSeek Harness project Skills for transmitted torque, pure-torsion solid-shaft sizing, and combined bending-torsion sizing.
+- DeepSeek Harness project Skills for transmitted torque, single-point-load statics, pure-torsion solid-shaft sizing, and combined bending-torsion sizing.
 - A combined bending and torsion DSH Skill with load-state-aware selection between pure-torsion and combined strength models.
 - Automatic natural-language Skill discovery and multi-Skill chaining: power and speed → torque → theoretical minimum shaft diameter.
 - Calculator JSON is the sole numerical authority; the Skills prohibit Agent-side recalculation, substitution, and rounding of results.
 - Torque → combined shaft sizing chaining when power, speed, and bending moment are provided.
+- Load → statics → combined-strength chaining, with every calculator result gated by the deterministic reviewer.
 - Unambiguous unit conversion before calculation; ambiguous or missing parameters require clarification.
 - Scope-boundary protection for unsupported analyses and invalid-input rejection, including zero rotational speed.
 - Pytest regression tests.
 
 The pure-torsion and combined bending-torsion calculators return theoretical minimum diameters for a solid circular shaft under steady loading. The agent now selects between pure-torsion and combined bending-torsion models based on the stated load condition.
 
-This is not a complete shaft-design system. Neither model accounts for fatigue, alternating loads, stress concentrations, shoulders, keyways, shock/dynamic effects, stiffness, deflection, critical speed, or standard preferred diameters. Final shaft sizing, bearing selection, CAD/CAE integration, reviewer agents, and multi-agent workflows are not implemented.
+This is not a general shaft loading system or a complete shaft-design system. Neither strength model accounts for fatigue, alternating loads, stress concentrations, shoulders, keyways, shock/dynamic effects, stiffness, deflection, critical speed, or standard preferred diameters. Final shaft sizing, bearing selection, CAD/CAE integration, reviewer agents, and multi-agent workflows are not implemented.
 
 ## Architecture
 
@@ -39,6 +41,7 @@ User request
 DeepSeek Harness
     ↓
 transmission-torque Skill → torque calculator → JSON torque_nm (when power and speed are given)
+shaft-point-load-statics Skill → statics calculator → JSON reactions and max_bending_moment_nm (when one transverse point load is given)
     ↓ (select from the stated load condition)
 solid-shaft-torsion Skill → shaft_torsion calculator → JSON min_diameter_mm (pure torsion)
 combined-shaft-loading Skill → shaft_combined calculator → JSON min_diameter_mm (bending present)
@@ -94,7 +97,8 @@ mechanical-design-agent/
 ├─ .dsh/skills/
 │  ├─ transmission-torque/SKILL.md
 │  ├─ solid-shaft-torsion/SKILL.md
-│  └─ combined-shaft-loading/SKILL.md
+│  ├─ combined-shaft-loading/SKILL.md
+│  └─ shaft-point-load-statics/SKILL.md
 ├─ examples/
 ├─ knowledge/
 │  ├─ README.md
@@ -102,7 +106,8 @@ mechanical-design-agent/
 │  └─ models/
 │     ├─ transmitted_torque.toml
 │     ├─ solid_shaft_pure_torsion.toml
-│     └─ solid_shaft_combined_tresca.toml
+│     ├─ solid_shaft_combined_tresca.toml
+│     └─ simply_supported_point_load.toml
 ├─ outputs/
 ├─ src/mechanical_agent/
 │  ├─ __init__.py
@@ -111,7 +116,8 @@ mechanical-design-agent/
 │     ├─ __init__.py
 │     ├─ torque.py
 │     ├─ shaft_torsion.py
-│     └─ shaft_combined.py
+│     ├─ shaft_combined.py
+│     └─ shaft_statics.py
 ├─ tests/
 │  ├─ test_torque.py
 │  ├─ test_shaft_torsion.py

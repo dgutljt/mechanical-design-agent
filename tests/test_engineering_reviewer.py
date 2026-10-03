@@ -11,6 +11,7 @@ import pytest
 from mechanical_agent.calculators.torque import calculate_transmitted_torque
 from mechanical_agent.calculators.shaft_torsion import calculate_solid_shaft_min_diameter
 from mechanical_agent.calculators.shaft_combined import calculate_solid_shaft_min_diameter_combined
+from mechanical_agent.calculators.shaft_statics import calculate_simply_supported_point_load
 from mechanical_agent.review import ReviewResult, review_engineering_result
 
 
@@ -26,7 +27,11 @@ def combined_result():
     return asdict(calculate_solid_shaft_min_diameter_combined(100, 50, 40))
 
 
-@pytest.mark.parametrize("factory", [torque_result, pure_result, combined_result])
+def statics_result():
+    return asdict(calculate_simply_supported_point_load(1000, 400, 150))
+
+
+@pytest.mark.parametrize("factory", [torque_result, pure_result, combined_result, statics_result])
 def test_real_calculator_result_passes(factory):
     review = review_engineering_result(factory())
     assert isinstance(review, ReviewResult)
@@ -161,3 +166,33 @@ def test_cli_tamper_and_invalid_json_exit_codes():
     malformed = subprocess.run(command, input="{bad", capture_output=True, text=True)
     assert malformed.returncode == 2
     assert json.loads(malformed.stdout)["status"] == "FAIL"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("reaction_a_n", 620), ("reaction_b_n", 380),
+    ("max_bending_moment_nmm", 93000), ("max_bending_moment_nm", 93.0),
+    ("max_moment_position_mm", 160), ("load_position_mm", 401),
+    ("model_id", "transmitted_torque_v1"),
+])
+def test_statics_tampering_fails(field, value):
+    result = statics_result()
+    result[field] = value
+    assert review_engineering_result(result).status == "FAIL"
+
+
+@pytest.mark.parametrize("load,position", [(0, 150), (1000, 0), (1000, 400)])
+def test_statics_zero_and_support_cases_pass(load, position):
+    result = asdict(calculate_simply_supported_point_load(load, 400, position))
+    assert review_engineering_result(result).status == "PASS"
+
+
+def test_real_statics_cli_pipeline():
+    calculator = subprocess.run(
+        [sys.executable, "-m", "mechanical_agent.calculators.shaft_statics",
+         "--load-n", "1000", "--span-mm", "400", "--load-position-mm", "150"],
+        capture_output=True, text=True, check=True)
+    reviewer = subprocess.run(
+        [sys.executable, "-m", "mechanical_agent.review.engineering_result"],
+        input=calculator.stdout, capture_output=True, text=True)
+    assert reviewer.returncode == 0
+    assert json.loads(reviewer.stdout)["status"] == "PASS"
