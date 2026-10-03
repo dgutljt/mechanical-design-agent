@@ -7,6 +7,10 @@ user-invocable: true
 
 # Solid Shaft Torsion
 
+## Mechanical Engineering profile
+
+The Mechanical Engineering profile has no Native Tool for standalone torsion sizing. The Shell/CLI procedure below is for the developer profile. In the restricted profile, explain that this operation is unavailable; do not hand-calculate a result or ask to enable Shell.
+
 ## Purpose and limits
 
 Use this Skill only for a solid circular shaft under pure steady torsion with known transmitted torque and allowable shear stress. It computes the theoretical minimum diameter, not a final engineering shaft diameter. The relation is `d_min = (16 T / (pi * tau_allow))^(1/3)`, with torque converted from N·m to N·mm and allowable shear stress in MPa (N/mm²).

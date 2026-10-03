@@ -1,0 +1,44 @@
+# Activate explicitly from the repository root:
+# dsh --profile headless --patch .dsh/mechanical-engineering.patch.yml --json "<task>"
+# This patch targets @deepseek-ai/dsh 0.2.0-rc.2 and keeps the developer
+# headless profile unchanged. The Native plugin alone owns engineering execution.
+- id: tools
+  config:
+    mode: native
+- id: tool-pwsh
+  disabled: true
+- id: tool-bash
+  disabled: true
+- id: tool-fs
+  disabled: true
+- id: tool-jobs
+  disabled: true
+- id: tool-web
+  disabled: true
+- id: tool-subagent
+  disabled: true
+- id: tool-subagent-fork
+  disabled: true
+- id: tool-subagent-control
+  disabled: true
+- id: tool-subagent-list-agents
+  disabled: true
+- id: tool-workflow
+  disabled: true
+- id: workflow-ptc
+  disabled: true
+- id: ptc-runtime
+  disabled: true
+- id: tool-plugin-manager
+  disabled: true
+- id: plugin-manager
+  disabled: true
+- id: config-editor
+  disabled: true
+- id: settings
+  disabled: true
+- insert:
+    - id: mechanical-native-tools
+      name: '../packages/dsh-mechanical-plugin/dist/index.js'
+      config:
+        repositoryRoot: !!js process.cwd()

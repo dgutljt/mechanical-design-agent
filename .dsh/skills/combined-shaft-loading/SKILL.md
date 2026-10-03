@@ -7,6 +7,10 @@ user-invocable: true
 
 # Combined Shaft Loading
 
+## Mechanical Engineering profile
+
+In the Mechanical Engineering profile, only the complete supported raw-input chain is executable through `analyze_verified_shaft_strength`. Its argument schema has no torque or bending-moment override fields. Standalone combined sizing, diagram/report generation, and the Shell/CLI paths below are unavailable in this restricted runtime; state that boundary without computing a substitute or asking to enable Shell in the same profile.
+
 ## Native verified numerical chain
 
 When the registered `analyze_verified_shaft_strength` Native Tool is available and the request gives power, speed, a simply supported span, at least two same-direction point loads, and allowable shear stress, invoke it once with only `power_kw`, `speed_rpm`, `span_mm`, `loads` (`load_n`, `position_mm`), and `allowable_shear_mpa`. Require `ok: true` and torque, statics, and combined reviews all `PASS`. Its Python adapter calls the existing verified handoff, which alone transfers exact torque and maximum bending moment. Never pass copied, rounded, or user-suggested intermediate values to the Tool. Do not run the separate Shell calculator/Reviewer/workflow chain for this numerical case. The CLI sequence below is for environments without this Tool and for requests requiring diagram or report artifacts, which this Tool does not generate. Do not choose a production diameter from the theoretical minimum.

@@ -7,6 +7,10 @@ user-invocable: true
 
 # Shaft Multi Point Load Statics
 
+## Mechanical Engineering profile
+
+In the Mechanical Engineering profile, multi-point statics is executable only as part of the complete raw-input shaft chain through `analyze_verified_shaft_strength`. Standalone statics and diagram/report CLI paths below require the developer profile; do not calculate them in model text or ask to enable Shell in the restricted profile.
+
 For a complete supported numerical shaft-strength request with power, speed, span, two or more same-direction point loads, and allowable shear stress, use the registered `analyze_verified_shaft_strength` Native Tool when available. Supply only raw user inputs: `power_kw`, `speed_rpm`, `span_mm`, `loads` with `load_n` and `position_mm`, and `allowable_shear_mpa`. Its existing verified handoff enforces the three Reviewer gates and exact intermediate-value lineage. Do not run separate calculator or workflow CLI commands for this numerical request when the Native Tool is available. The CLI and rendering directions below still apply to standalone statics, diagram/report artifact requests, or environments without the Native Tool.
 
 Use the most specific validated model: for one point load select `shaft-point-load-statics`; for two or more select this Skill. Require the support span and every load magnitude and position. Keep coincident loads as separate `--load` arguments. Never merge different-position loads, omit a load, guess a position, or discretize a distributed load.

@@ -128,11 +128,22 @@ From the repository root, a headless invocation with the validated DSH version i
 npx.cmd --yes @deepseek-ai/dsh --profile headless --json "Calculate transmitted torque for 5.5 kW at 960 rpm."
 ```
 
+For the restricted Mechanical Engineering runtime, build the local Native plugin and explicitly apply the repository patch from the repository root:
+
+```powershell
+cd packages/dsh-mechanical-plugin
+npm run build
+cd ../..
+npx.cmd --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile headless --patch .dsh/mechanical-engineering.patch.yml --json "Calculate transmitted torque for 5.5 kW at 960 rpm."
+```
+
+This rc.2 patch keeps the existing `headless` developer profile intact. It provides only the two reviewed Native engineering operations, Skills, read-only file search, and session planning tools. It removes shell, arbitrary code execution, source mutation, subagents, general workflows, and web research from the model-facing Tool inventory. Use the unpatched developer profile for maintenance, tests, and artifact generation; it is not a verified-only engineering runtime. The restricted profile currently covers standalone transmitted torque and the supported full shaft-strength case. Other numerical models and diagram/report generation are unavailable through this profile until reviewed Native operations are added.
+
 The DSH session requires its normal model/provider configuration. Skill discovery and chaining depend on the request and supported model scope; Skills are orchestration instructions, not numerical engines.
 
 ## Tests
 
-The full suite passes **210 tests** (including the reproducible V1 demo checks). From the repository root in PowerShell:
+The full suite passes **232 tests** (including the reproducible V1 demo checks). From the repository root in PowerShell:
 
 ```powershell
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"

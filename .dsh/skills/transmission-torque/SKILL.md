@@ -7,6 +7,10 @@ user-invocable: true
 
 # Transmission Torque
 
+## Mechanical Engineering profile
+
+In the Mechanical Engineering profile, use `calculate_transmitted_torque` for standalone torque and `analyze_verified_shaft_strength` for the supported complete shaft case. These Native Tools include Reviewer and Registry gates. The Shell/CLI instructions below apply only to the developer profile or an environment without the Native Tool. Do not request Shell access merely to bypass this profile.
+
 ## Purpose
 
 Calculate steady transmitted torque from mechanical power P and rotational speed n. The current engineering formula is T = 9550 × P / n, where P is in kW, n is in rpm (r/min), and T is in N·m. The Python calculator uses the project's engineering approximation 9550.
