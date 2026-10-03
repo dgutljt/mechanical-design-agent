@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+.dsh/mechanical-plugin.local.json
 *.pem
 *.key
 *api_key*
