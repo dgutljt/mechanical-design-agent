@@ -1,0 +1,16 @@
+model_id = "simply_supported_signed_multi_point_load_v1"
+title = "Signed one-plane simply supported point-load statics"
+status = "validated calculator model"
+calculator_module = "mechanical_agent.calculators.shaft_statics_signed"
+calculator_function = "calculate_simply_supported_signed_point_loads"
+dsh_skill = "shaft-multi-point-load-statics"
+purpose = "Signed reactions, shear, bending moments, and critical absolute bending for one transverse plane."
+equation = "RA+RB+sum(Fi)=0; RB*L+sum(Fi*xi)=0; V=RA+sum(Fi left); M=RA*x+sum(Fi*max(0,x-xi)); dM/dx=V"
+derivation = "The external source supports force and moment equilibrium and internal shear/moment methods. Signed algebra, event/station JSON, absolute extrema, tie/plateau merging, and the zero-plane full-span region are project derivation and implementation rules; the source does not prescribe them."
+sign_convention = "x A-to-B; +q is chosen transverse direction (vertical plane: upward); forces/reactions positive +q; V=sum(left external forces); dM/dx=V; +M follows this derivative (vertical plane: sagging)"
+inputs = ["span_mm", "loads: signed load_n and position_mm; empty list permitted"]
+outputs = ["total_load_n", "reaction_a_n", "reaction_b_n", "stations", "segments", "signed_max_bending_moment_nmm", "signed_min_bending_moment_nmm", "critical_bending_moment_nmm", "critical_bending_moment_nm", "critical_moment_regions"]
+units = ["forces and reactions: N", "span and positions: mm", "moments: N*mm", "converted critical magnitude: N*m"]
+assumptions = ["Two ideal simple supports at x=0 and x=L.", "One transverse plane; static signed point forces on or between supports.", "Positive force and reaction follow the chosen +q axis; in a vertical plane choose +q upward, giving sagging +M.", "Coincident loads remain separate inputs; zero-force and empty-load planes are legal."]
+limitations = ["No distributed loads, applied couples, overhangs, interior supports, axial loads, or two-plane bending.", "No variable EI, deflection, fatigue, stress concentration, or machine-element load generation.", "This Python core model is not exposed by the restricted Native runtime."]
+source_ids = ["engineering_statics_beam_equilibrium"]

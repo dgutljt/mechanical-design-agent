@@ -7,6 +7,7 @@ import math
 import sys
 
 from mechanical_agent.knowledge_registry import resolve_model_provenance
+from mechanical_agent.review.signed_statics import verify as _signed_statics
 
 REL_TOL = 1e-12
 ABS_TOL = 1e-12
@@ -30,6 +31,13 @@ CONTRACTS = {
         ("load_n", "span_mm", "load_position_mm", "reaction_a_n", "reaction_b_n",
          "max_bending_moment_nmm", "max_bending_moment_nm", "max_moment_position_mm"),
         ("formula", "assumptions")),
+    "simply_supported_signed_multi_point_load_v1": (
+        "mechanical_agent.calculators.shaft_statics_signed",
+        "calculate_simply_supported_signed_point_loads",
+        ("span_mm", "total_load_n", "reaction_a_n", "reaction_b_n",
+         "signed_max_bending_moment_nmm", "signed_min_bending_moment_nmm",
+         "critical_bending_moment_nmm", "critical_bending_moment_nm"),
+        ("formula", "assumptions", "sign_convention")),
     "simply_supported_multi_point_load_v1": (
         "mechanical_agent.calculators.shaft_statics_multi", "calculate_simply_supported_point_loads",
         ("span_mm", "total_load_n", "reaction_a_n", "reaction_b_n",
@@ -283,6 +291,7 @@ VERIFIERS = {
     "solid_shaft_combined_tresca_v1": _combined,
     "simply_supported_point_load_v1": _statics,
     "simply_supported_multi_point_load_v1": _multi_statics,
+    "simply_supported_signed_multi_point_load_v1": _signed_statics,
 }
 
 
@@ -304,6 +313,9 @@ def review_engineering_result(result: dict) -> ReviewResult:
     review.add("model_registered", True, f"registered model_id: {model_id}")
     module, function, numeric, metadata = CONTRACTS[model_id]
     missing = [name for name in (*numeric, *metadata) if name not in result]
+    if model_id == "simply_supported_signed_multi_point_load_v1":
+        missing.extend(name for name in ("loads", "stations", "segments", "critical_moment_regions", "units")
+                       if name not in result)
     if model_id == "simply_supported_multi_point_load_v1":
         missing.extend(name for name in ("loads", "segments", "max_moment_regions")
                        if name not in result)
