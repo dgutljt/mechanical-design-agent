@@ -1,8 +1,9 @@
 import z from '@deepseek-ai/schemastery';
 import { defineTool } from '@deepseek-ai/dsh-tools';
-import { callTorque, callWorkflow } from './bridge/python.js';
+import { callTorque, callWorkflow, callTwoPlaneWorkflow } from './bridge/python.js';
 import { envelopeSchema } from './contracts/torque.js';
 import { envelopeSchema as workflowEnvelopeSchema } from './contracts/shaft-workflow.js';
+import { envelopeSchema as twoPlaneEnvelopeSchema } from './contracts/two-plane-workflow.js';
 
 export const name = 'dsh-mechanical-plugin';
 export const inject = ['tools', 'subprocess'];
@@ -46,5 +47,29 @@ export function apply(ctx: any, config: any) {
     },
     timeoutMs: 20000,
     execute: (args: any, exec: any) => callWorkflow(ctx, config, args, exec.signal)
+  }));
+  ctx.tools.register(defineTool({
+    name: 'analyze_verified_two_plane_shaft_strength',
+    description: 'Analyze signed transverse point loads in two orthogonal planes through Python calculators, mandatory Reviewers, Verified Handoff, and Registry provenance. Supply raw inputs only.',
+    parameters: {
+      power_kw: { type: 'number', required: true, description: 'Mechanical power in kW' },
+      speed_rpm: { type: 'number', required: true, description: 'Rotational speed in rpm' },
+      span_mm: { type: 'number', required: true, description: 'Support span in mm' },
+      plane_1_loads: { type: 'array', required: true, description: 'Signed point loads along plane 1 (+y), within the span',
+        items: { type: 'object', additionalProperties: false, properties: {
+          load_n: { type: 'number', required: true }, position_mm: { type: 'number', required: true }
+        } } },
+      plane_2_loads: { type: 'array', required: true, description: 'Signed point loads along plane 2 (+z), within the span',
+        items: { type: 'object', additionalProperties: false, properties: {
+          load_n: { type: 'number', required: true }, position_mm: { type: 'number', required: true }
+        } } },
+      allowable_shear_mpa: { type: 'number', required: true, description: 'Allowable shear stress in MPa' }
+    },
+    output: {
+      schema: twoPlaneEnvelopeSchema,
+      render: (_args: any, value: any) => [{ type: 'text', text: JSON.stringify(value) }]
+    },
+    timeoutMs: 20000,
+    execute: (args: any, exec: any) => callTwoPlaneWorkflow(ctx, config, args, exec.signal)
   }));
 }

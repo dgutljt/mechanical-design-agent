@@ -2,10 +2,12 @@ import { readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, join, resolve, sep } from 'node:path';
 import { failure, CONTRACT_VERSION, OPERATION } from '../contracts/torque.js';
 import { failure as workflowFailure, OPERATION as WORKFLOW_OPERATION, envelopeSchema as workflowSchema } from '../contracts/shaft-workflow.js';
+import { failure as twoPlaneFailure, OPERATION as TWO_PLANE_OPERATION, envelopeSchema as twoPlaneSchema } from '../contracts/two-plane-workflow.js';
 import { validateJsonSchemaValue, valueSchemaSpecToJsonSchema } from '@deepseek-ai/dsh-tools';
 
 const MODULE = 'mechanical_agent.bridge.torque_adapter';
 const WORKFLOW_MODULE = 'mechanical_agent.bridge.shaft_workflow_adapter';
+const TWO_PLANE_MODULE = 'mechanical_agent.bridge.two_plane_workflow_adapter';
 const INPUT_LIMIT = 16_384;
 const OUTPUT_LIMIT = 1_048_576;
 const STDERR_LIMIT = 16_384;
@@ -150,4 +152,42 @@ export async function callWorkflow(ctx: any, config: any, input: any, signal: Ab
     if (validateJsonSchemaValue(valueSchemaSpecToJsonSchema(workflowSchema), envelope).length) throw Error('Bad envelope');
     return envelope;
   } catch { return workflowFailure('INTERNAL_ADAPTER_ERROR', 'Python adapter returned invalid JSON'); }
+}
+
+const TWO_PLANE_FIELDS = ['power_kw', 'speed_rpm', 'span_mm', 'plane_1_loads', 'plane_2_loads', 'allowable_shear_mpa'];
+function validTwoPlaneInput(input: any): boolean {
+  return !!input && typeof input === 'object' && !Array.isArray(input) &&
+    Object.keys(input).length === TWO_PLANE_FIELDS.length &&
+    TWO_PLANE_FIELDS.every(key => Object.hasOwn(input, key)) &&
+    TWO_PLANE_FIELDS.filter(key => !key.endsWith('_loads')).every(key =>
+      typeof input[key] === 'number' && Number.isFinite(input[key])) &&
+    ['plane_1_loads', 'plane_2_loads'].every(key => Array.isArray(input[key]) &&
+      input[key].every((load: any) => !!load && typeof load === 'object' && !Array.isArray(load) &&
+        Object.keys(load).length === 2 && Object.hasOwn(load, 'load_n') &&
+        Object.hasOwn(load, 'position_mm') && typeof load.load_n === 'number' &&
+        Number.isFinite(load.load_n) && typeof load.position_mm === 'number' &&
+        Number.isFinite(load.position_mm))) &&
+    (input.plane_1_loads.length + input.plane_2_loads.length > 0);
+}
+
+export async function callTwoPlaneWorkflow(ctx: any, config: any, input: any, signal: AbortSignal) {
+  if (!validTwoPlaneInput(input)) return twoPlaneFailure('INVALID_TOOL_INPUT', 'Expected raw two-plane shaft inputs only');
+  let root;
+  try {
+    if (!isAbsolute(config.repositoryRoot)) throw new Error('Repository root must be absolute');
+    root = await realpath(config.repositoryRoot);
+  } catch { return twoPlaneFailure('PYTHON_RESOLUTION_ERROR', 'Invalid trusted repository root'); }
+  let python;
+  try { python = await resolvePython(ctx, config, root, signal); }
+  catch { return twoPlaneFailure(signal.aborted ? 'CANCELLED' : 'PYTHON_RESOLUTION_ERROR', 'Compatible Python interpreter unavailable'); }
+  const payload = JSON.stringify({ contract_version: CONTRACT_VERSION, operation: TWO_PLANE_OPERATION, input });
+  if (Buffer.byteLength(payload, 'utf8') > INPUT_LIMIT) return twoPlaneFailure('INVALID_TOOL_INPUT', 'Input exceeds byte limit');
+  const result = await run(ctx, python, root, [], payload, signal, 10000, TWO_PLANE_MODULE);
+  if (result.error) return twoPlaneFailure(result.error, result.error === 'TIMEOUT' ? 'Python operation timed out' :
+    result.error === 'CANCELLED' ? 'Operation cancelled' : 'Python process failed');
+  try {
+    const envelope = parseObject(result.stdout);
+    if (validateJsonSchemaValue(valueSchemaSpecToJsonSchema(twoPlaneSchema), envelope).length) throw Error('Bad envelope');
+    return envelope;
+  } catch { return twoPlaneFailure('INTERNAL_ADAPTER_ERROR', 'Python adapter returned invalid JSON'); }
 }

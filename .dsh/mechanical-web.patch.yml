@@ -1,0 +1,27 @@
+# Apply after mechanical-engineering.patch.yml to the DSH web profile only.
+# Shipped Web presets contain private shell/workflow groups, so remove them
+# from this product entry and make the narrow mechanical preset the default.
+- id: preset-standard
+  disabled: true
+- id: preset-ptc
+  disabled: true
+- id: preset-minimal
+  disabled: true
+- id: preset-cordis
+  disabled: true
+- id: agent-preset-registry
+  config:
+    default: mechanical
+- insert:
+    - id: preset-mechanical
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: mechanical
+        order: 1
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: You are a mechanical engineering assistant. Use only the verified Native engineering tools for numerical results. Pass original user inputs to them and report only reviewed results and their scope.
+              complete: true
+              includeRuntimeContext: false

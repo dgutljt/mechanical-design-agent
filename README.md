@@ -4,6 +4,10 @@
 
 A deterministic, review-gated mechanical engineering agent built on DeepSeek Harness.
 
+## How to open Mechanical Design Agent
+
+On Windows, double-click [start-mechanical-dsh.cmd](start-mechanical-dsh.cmd) in this repository. It builds the local plugin, starts the restricted Mechanical Engineering DSH runtime, and opens the local Web UI. Install the plugin dependencies once with `npm install --prefix packages/dsh-mechanical-plugin`. PowerShell fallback from the repository root: `./start-mechanical-dsh.cmd`.
+
 The LLM understands requests and orchestrates tools; deterministic Python performs the engineering calculations. Reviewer gates validate supported results, a provenance registry links each model to its assumptions and sources, and Verified Handoff preserves exact numerical lineage in the supported calculator chain. **The LLM is not the numerical authority.** This is an experimental engineering agent, not a general shaft design system.
 
 ## How It Works
@@ -139,21 +143,21 @@ npm install --prefix packages/dsh-mechanical-plugin
 node scripts/verify_v15_runtime.mjs
 ```
 
-The health check builds the Native plugin, verifies the effective DSH version and composed profile, inspects the mounted Tool registry before engineering requests, runs fresh torque, shaft, and adversarial sessions, checks the unpatched developer profile, and runs Python, plugin, and V1 demo regressions. It exits nonzero on version, configuration, Tool, execution, or regression drift. It saves prompts and traces in a new system temporary directory outside the repository. Set `MECHANICAL_AGENT_PYTHON` to the Python executable when it is not on `PATH`; set `DSH_CLI` to an installed DSH `lib/bin.js` only when automatic local resolution is unavailable.
+The health check builds the Native plugin, verifies the effective DSH version and composed profile, inspects the mounted Tool registry before engineering requests, runs fresh torque, shaft, two-plane, and adversarial sessions, checks the unpatched developer profile, and runs Python, plugin, and V1 demo regressions. It exits nonzero on version, configuration, Tool, execution, or regression drift. It saves prompts and traces in a new system temporary directory outside the repository. Set `MECHANICAL_AGENT_PYTHON` to the Python executable when it is not on `PATH`; set `DSH_CLI` to an installed DSH `lib/bin.js` only when automatic local resolution is unavailable.
 
-After `V1.5 ACCEPTANCE PASS`, start a restricted session from the repository root with:
+After `PHASE 13E ACCEPTANCE PASS`, start a restricted command-line session from the repository root with:
 
 ```powershell
 npx.cmd --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile headless --patch .dsh/mechanical-engineering.patch.yml --json "Calculate transmitted torque for 5.5 kW at 960 rpm."
 ```
 
-This rc.2 patch keeps the `headless` developer profile intact. The restricted profile exposes two reviewed Native engineering operations, Skills, read-only file search, and session planning tools. The health check requires the exact validated set of 10 mounted Tools and rejects shell, arbitrary code execution, source mutation, subagents, and general workflows. The developer profile is useful for maintenance but carries no verified engineering guarantee. The restricted profile currently covers standalone transmitted torque and the supported full shaft-strength case. Other numerical models and diagram/report generation are unavailable through this profile until reviewed Native operations are added.
+This rc.2 patch keeps the `headless` developer profile intact. The restricted command-line profile exposes three reviewed Native engineering operations, Skills, read-only file search, and session planning tools. The health check requires the exact validated set of 11 mounted Tools and rejects shell, arbitrary code execution, source mutation, subagents, and general workflows. The Windows launcher applies this patch plus `.dsh/mechanical-web.patch.yml`, which restricts Web sessions to the mechanical preset. The developer profile is useful for maintenance but carries no verified engineering guarantee. The restricted profile covers standalone transmitted torque, the original single-plane verified shaft-strength case, and signed two-plane point-load verified shaft strength. Other numerical models and diagram/report generation are unavailable through this profile until reviewed Native operations are added.
 
 The DSH session requires its normal model/provider configuration. Skill discovery and chaining depend on the request and supported model scope; Skills are orchestration instructions, not numerical engines.
 
 ## Tests
 
-The full suite passes **232 tests** (including the reproducible V1 demo checks). From the repository root in PowerShell:
+The full suite passes **301 Python tests and 20 plugin tests** (including the reproducible V1 demo checks). From the repository root in PowerShell:
 
 ```powershell
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"
