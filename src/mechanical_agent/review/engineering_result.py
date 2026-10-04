@@ -8,6 +8,7 @@ import sys
 
 from mechanical_agent.knowledge_registry import resolve_model_provenance
 from mechanical_agent.review.signed_statics import verify as _signed_statics
+from mechanical_agent.review.two_plane_statics import verify as _two_plane_statics
 
 REL_TOL = 1e-12
 ABS_TOL = 1e-12
@@ -38,6 +39,12 @@ CONTRACTS = {
          "signed_max_bending_moment_nmm", "signed_min_bending_moment_nmm",
          "critical_bending_moment_nmm", "critical_bending_moment_nm"),
         ("formula", "assumptions", "sign_convention")),
+    "simply_supported_two_plane_point_load_v1": (
+        "mechanical_agent.calculators.shaft_statics_two_plane",
+        "calculate_simply_supported_two_plane_point_loads",
+        ("span_mm", "critical_resultant_bending_moment_nmm",
+         "critical_resultant_bending_moment_nm"),
+        ("formula", "assumptions", "coordinate_convention")),
     "simply_supported_multi_point_load_v1": (
         "mechanical_agent.calculators.shaft_statics_multi", "calculate_simply_supported_point_loads",
         ("span_mm", "total_load_n", "reaction_a_n", "reaction_b_n",
@@ -292,6 +299,7 @@ VERIFIERS = {
     "simply_supported_point_load_v1": _statics,
     "simply_supported_multi_point_load_v1": _multi_statics,
     "simply_supported_signed_multi_point_load_v1": _signed_statics,
+    "simply_supported_two_plane_point_load_v1": _two_plane_statics,
 }
 
 
@@ -315,6 +323,10 @@ def review_engineering_result(result: dict) -> ReviewResult:
     missing = [name for name in (*numeric, *metadata) if name not in result]
     if model_id == "simply_supported_signed_multi_point_load_v1":
         missing.extend(name for name in ("loads", "stations", "segments", "critical_moment_regions", "units")
+                       if name not in result)
+    if model_id == "simply_supported_two_plane_point_load_v1":
+        missing.extend(name for name in ("plane_1", "plane_2", "common_stations_mm",
+                                       "resultant_stations", "critical_stations", "critical_regions", "units")
                        if name not in result)
     if model_id == "simply_supported_multi_point_load_v1":
         missing.extend(name for name in ("loads", "segments", "max_moment_regions")
@@ -372,7 +384,7 @@ def review_engineering_result(result: dict) -> ReviewResult:
         return review
     try:
         VERIFIERS[model_id](result, review)
-    except (OverflowError, ZeroDivisionError, ValueError) as exc:
+    except (OverflowError, ZeroDivisionError, ValueError, TypeError, KeyError) as exc:
         review.add("numerical_consistency", False,
                    f"numerical consistency check failed: {exc}")
     return review

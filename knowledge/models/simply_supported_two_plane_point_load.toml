@@ -1,0 +1,16 @@
+model_id = "simply_supported_two_plane_point_load_v1"
+title = "Two-plane simply supported signed point-load resultant bending"
+status = "validated calculator model"
+calculator_module = "mechanical_agent.calculators.shaft_statics_two_plane"
+calculator_function = "calculate_simply_supported_two_plane_point_loads"
+dsh_skill = "shaft-multi-point-load-statics"
+purpose = "Reviewed signed statics in two perpendicular transverse directions and same-station resultant bending."
+equation = "M_z(x)=plane_1_moment(x); M_y(x)=-plane_2_moment(x); R(x)=hypot(plane_1_moment(x),plane_2_moment(x)); Rcritical=max(R(x) at common events)"
+derivation = "External engineering statics supports equilibrium and per-plane bending. The orthogonal Euclidean resultant, common-event-endpoint maximum search, critical tie/plateau representation, and machine-data layout are project mathematical derivation and project implementation rules, not an algorithm prescribed by the external source."
+coordinate_convention = "+x A-to-B; plane_1 loads along +y, plane_2 loads along +z; plane_1_moment is M_z, plane_2_moment is -M_y; each signed scalar follows the signed one-plane dM/dx=V convention"
+inputs = ["span_mm", "plane_1_loads: signed load_n along +y and position_mm; empty list permitted", "plane_2_loads: signed load_n along +z and position_mm; empty list permitted"]
+outputs = ["reviewable signed plane_1 and plane_2 results", "common_stations_mm", "resultant_stations with both components", "critical_resultant_bending_moment_nmm", "critical_resultant_bending_moment_nm", "critical_stations", "critical_regions"]
+units = ["forces and reactions: N", "span and positions: mm", "component and resultant moments: N*mm", "converted critical resultant: N*m"]
+assumptions = ["Two ideal simple supports at x=0 and x=L.", "Two orthogonal transverse directions with signed static point loads on or between supports.", "Each plane uses simply_supported_signed_multi_point_load_v1 without changing its semantics.", "Both planes may have empty load lists."]
+limitations = ["No distributed loads, applied couples, overhangs, interior supports, or axial loads.", "No combined stress, diameter sizing, deflection, fatigue, or machine-element load generation.", "Python engineering core only; the restricted Native runtime does not expose this model.", "The dsh_skill field retains the registry schema's existing skill pointer and does not grant Native Tool exposure."]
+source_ids = ["engineering_statics_beam_equilibrium"]

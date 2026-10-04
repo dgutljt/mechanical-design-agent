@@ -24,6 +24,7 @@ MODEL_FILES = {
     "simply_supported_point_load.toml",
     "simply_supported_multi_point_load.toml",
     "simply_supported_signed_multi_point_load.toml",
+    "simply_supported_two_plane_point_load.toml",
 }
 CALCULATORS = {
     ("mechanical_agent.calculators.torque", "calculate_transmitted_torque"),
@@ -35,6 +36,7 @@ CALCULATORS = {
     ("mechanical_agent.calculators.shaft_statics", "calculate_simply_supported_point_load"),
     ("mechanical_agent.calculators.shaft_statics_multi", "calculate_simply_supported_point_loads"),
     ("mechanical_agent.calculators.shaft_statics_signed", "calculate_simply_supported_signed_point_loads"),
+    ("mechanical_agent.calculators.shaft_statics_two_plane", "calculate_simply_supported_two_plane_point_loads"),
 }
 REQUIRED_FIELDS = {
     "model_id",
@@ -65,7 +67,7 @@ def test_sources_parse_and_have_unique_ids() -> None:
     assert len(ids) == len(set(ids))
 
 
-def test_all_six_model_cards_parse_and_have_unique_ids() -> None:
+def test_all_seven_model_cards_parse_and_have_unique_ids() -> None:
     assert {path.name for path in (KNOWLEDGE / "models").glob("*.toml")} == MODEL_FILES
     model_ids = [card["model_id"] for card in cards()]
     assert len(model_ids) == len(set(model_ids))
@@ -76,6 +78,7 @@ def test_all_six_model_cards_parse_and_have_unique_ids() -> None:
         "simply_supported_point_load_v1",
         "simply_supported_multi_point_load_v1",
         "simply_supported_signed_multi_point_load_v1",
+        "simply_supported_two_plane_point_load_v1",
     }
 
 
