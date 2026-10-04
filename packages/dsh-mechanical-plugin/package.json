@@ -6,6 +6,7 @@
   "main": "./dist/index.js",
   "scripts": {"build": "node scripts/build.mjs", "test": "node --test test/*.test.mjs"},
   "dependencies": {
+    "@deepseek-ai/dsh": "0.2.0-rc.2",
     "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
     "@deepseek-ai/schemastery": "^3.18.4"
   },

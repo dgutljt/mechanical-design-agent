@@ -1,0 +1,3 @@
+- insert:
+    - id: v15-inventory
+      name: './v15-inventory.mjs'

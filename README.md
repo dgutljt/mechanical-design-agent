@@ -122,22 +122,32 @@ The five project Skills in [.dsh/skills/](.dsh/skills/) define orchestration con
 - `shaft-point-load-statics`
 - `shaft-multi-point-load-statics`
 
-From the repository root, a headless invocation with the validated DSH version is:
+### Development profile
+
+From the repository root, use the unpatched `headless` profile for development tasks, tests, and artifact generation:
 
 ```powershell
-npx.cmd --yes @deepseek-ai/dsh --profile headless --json "Calculate transmitted torque for 5.5 kW at 960 rpm."
+npx.cmd --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile headless --json "Calculate transmitted torque for 5.5 kW at 960 rpm."
 ```
 
-For the restricted Mechanical Engineering runtime, build the local Native plugin and explicitly apply the repository patch from the repository root:
+### Verified Mechanical Engineering profile
+
+Install the plugin dependencies once after cloning. Activate a Python 3.12 environment with this repository installed (`python -m pip install -e .`), then run the V1.5 health check from the repository root:
 
 ```powershell
-cd packages/dsh-mechanical-plugin
-npm run build
-cd ../..
+npm install --prefix packages/dsh-mechanical-plugin
+node scripts/verify_v15_runtime.mjs
+```
+
+The health check builds the Native plugin, verifies the effective DSH version and composed profile, inspects the mounted Tool registry before engineering requests, runs fresh torque, shaft, and adversarial sessions, checks the unpatched developer profile, and runs Python, plugin, and V1 demo regressions. It exits nonzero on version, configuration, Tool, execution, or regression drift. It saves prompts and traces in a new system temporary directory outside the repository. Set `MECHANICAL_AGENT_PYTHON` to the Python executable when it is not on `PATH`; set `DSH_CLI` to an installed DSH `lib/bin.js` only when automatic local resolution is unavailable.
+
+After `V1.5 ACCEPTANCE PASS`, start a restricted session from the repository root with:
+
+```powershell
 npx.cmd --yes @deepseek-ai/dsh@0.2.0-rc.2 --profile headless --patch .dsh/mechanical-engineering.patch.yml --json "Calculate transmitted torque for 5.5 kW at 960 rpm."
 ```
 
-This rc.2 patch keeps the existing `headless` developer profile intact. It provides only the two reviewed Native engineering operations, Skills, read-only file search, and session planning tools. It removes shell, arbitrary code execution, source mutation, subagents, general workflows, and web research from the model-facing Tool inventory. Use the unpatched developer profile for maintenance, tests, and artifact generation; it is not a verified-only engineering runtime. The restricted profile currently covers standalone transmitted torque and the supported full shaft-strength case. Other numerical models and diagram/report generation are unavailable through this profile until reviewed Native operations are added.
+This rc.2 patch keeps the `headless` developer profile intact. The restricted profile exposes two reviewed Native engineering operations, Skills, read-only file search, and session planning tools. The health check requires the exact validated set of 10 mounted Tools and rejects shell, arbitrary code execution, source mutation, subagents, and general workflows. The developer profile is useful for maintenance but carries no verified engineering guarantee. The restricted profile currently covers standalone transmitted torque and the supported full shaft-strength case. Other numerical models and diagram/report generation are unavailable through this profile until reviewed Native operations are added.
 
 The DSH session requires its normal model/provider configuration. Skill discovery and chaining depend on the request and supported model scope; Skills are orchestration instructions, not numerical engines.
 

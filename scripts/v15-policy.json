@@ -1,0 +1,12 @@
+{
+  "dshVersion": "0.2.0-rc.2",
+  "configSha256": "e9b7b1be116bad10696526c20c8a8f719539dbdef09eec97732ab99d6dcee809",
+  "restricted": {
+    "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-headless"],
+    "tools": ["analyze_verified_shaft_strength", "calculate_transmitted_torque", "create_goal", "exit_plan_mode", "get_goal", "glob", "grep", "skill", "todo_write", "update_goal"]
+  },
+  "required": ["calculate_transmitted_torque", "analyze_verified_shaft_strength", "skill"],
+  "allowed": ["analyze_verified_shaft_strength", "calculate_transmitted_torque", "create_goal", "exit_plan_mode", "get_goal", "glob", "grep", "skill", "todo_write", "update_goal"],
+  "forbiddenNames": ["pwsh", "bash", "shell", "run_code", "subagent", "subagent_fork", "workflow", "edit", "write"],
+  "forbiddenPattern": ["(^|_)(exec|execute|shell|bash|pwsh|python|code|subagent|workflow|edit|write|patch|file_mutat)(_|$)"]
+}
