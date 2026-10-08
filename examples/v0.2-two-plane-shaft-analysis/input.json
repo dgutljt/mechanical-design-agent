@@ -1,0 +1,12 @@
+{
+  "contract_version": "1",
+  "operation": "verified_two_plane_shaft_strength_v1",
+  "input": {
+    "power_kw": 5.5,
+    "speed_rpm": 960,
+    "span_mm": 600,
+    "plane_1_loads": [{"load_n": -1000, "position_mm": 200}],
+    "plane_2_loads": [{"load_n": -1000, "position_mm": 400}],
+    "allowable_shear_mpa": 40
+  }
+}

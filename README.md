@@ -1,14 +1,29 @@
 # Mechanical Design Agent
 
-**Current release:** 0.1.0 · **Status:** Experimental / educational V1 · **License:** [MIT](LICENSE)
+**Current release:** 0.1.0 · **v0.2 candidate:** under review · **License:** [MIT](LICENSE)
 
-A deterministic, review-gated mechanical engineering agent built on DeepSeek Harness.
+## Start here (Windows)
 
-## How to open Mechanical Design Agent
+1. Double-click [start-mechanical-dsh.cmd](start-mechanical-dsh.cmd) in this folder.
+2. Wait for the browser to open automatically.
+3. Enter the **mechanical** session.
+4. Describe the mechanical problem in ordinary language. For example:
 
-On Windows, double-click [start-mechanical-dsh.cmd](start-mechanical-dsh.cmd) in this repository. It builds the local plugin, starts the restricted Mechanical Engineering DSH runtime, and opens the local Web UI. Install the plugin dependencies once with `npm install --prefix packages/dsh-mechanical-plugin`. PowerShell fallback from the repository root: `./start-mechanical-dsh.cmd`.
+> Analyze verified two-plane shaft strength: power 5.5 kW, speed 960 rpm, simply supported span 600 mm, plane 1 signed point load -1000 N at 200 mm, plane 2 signed point load -1000 N at 400 mm, allowable shear stress 40 MPa. Report the same-station critical resultant and both critical positions, the signed plane components, all three Reviewer statuses, and the theoretical minimum diameter.
 
-The LLM understands requests and orchestrates tools; deterministic Python performs the engineering calculations. Reviewer gates validate supported results, a provenance registry links each model to its assumptions and sources, and Verified Handoff preserves exact numerical lineage in the supported calculator chain. **The LLM is not the numerical authority.** This is an experimental engineering agent, not a general shaft design system.
+The launcher builds the local plugin and starts the restricted Web runtime. Keep its terminal window open while using the session. Initial developer setup and prerequisites are in [Developer setup](#developer-setup).
+
+## Supported verified workflows
+
+- Transmitted torque from power and speed.
+- The existing one-plane, simply supported point-load shaft-strength workflow.
+- Signed two-plane, simply supported point-load shaft-strength workflow. Its resultant combines the two bending components **at the same shaft station**.
+
+The reported `d_min` is a **theoretical minimum strength diameter**, not a selected production diameter. Actual design still needs a preferred diameter choice and checks for stress concentration, fatigue, stiffness, and bearing or other machine-element fit.
+
+The verified workflows do not cover distributed loads, applied couples, overhung shafts, axial loads, fatigue, stress concentration, automatic material selection, production diameter selection, deflection, critical speed, bearings, gear or belt load generators, CATIA, or CAE.
+
+This is an experimental engineering agent. Deterministic Python calculators supply numerical results, Reviewer gates validate them, Verified Handoff preserves exact values through supported chains, and the Registry supplies provenance. The LLM explains reviewed results; it does not calculate engineering values.
 
 ## How It Works
 
@@ -46,14 +61,15 @@ Standalone calculations proceed from calculator to Reviewer and provenance. Veri
 | Solid shaft theoretical minimum diameter under pure torsion | Supported |
 | Solid shaft theoretical minimum diameter under combined steady bending and torsion | Supported |
 | Simply supported, single-point shaft statics | Supported |
-| Simply supported, multiple same-direction point-load statics | Supported |
-| Piecewise shear and bending-moment data | Multi-point model |
-| Shear-force and bending-moment SVG diagrams | Reviewed multi-point model |
-| Engineering Model Cards and provenance resolver | Five registered models |
-| Deterministic engineering Reviewer | Five registered models |
-| Verified cross-calculator handoff | Torque + multi-point statics → combined sizing |
-| Deterministic HTML engineering report | Complete supported multi-point shaft chain |
-| DSH Skills and headless orchestration | Project Skills provided; headless workflow validated during V1 development |
+| Simply supported, multiple same-direction point-load statics | Python V1 model |
+| Simply supported signed point-load and two-plane statics | Verified two-plane Native workflow |
+| Piecewise shear and bending-moment data | Python multi-point model |
+| Shear-force and bending-moment SVG diagrams | Python reviewed multi-point model |
+| Engineering Model Cards and provenance resolver | Seven registered models |
+| Deterministic engineering Reviewer | Seven registered models |
+| Verified cross-calculator handoff | One-plane and two-plane torque + statics → combined sizing |
+| Deterministic HTML engineering report | Python V1 multi-point shaft chain |
+| DSH restricted Web session | Three reviewed Native operations |
 
 ### Supported Engineering Models
 
@@ -64,6 +80,8 @@ Standalone calculations proceed from calculator to Reviewer and provenance. Veri
 | `solid_shaft_combined_tresca_v1` | Theoretical solid-shaft diameter under steady bending and torsion |
 | `simply_supported_point_load_v1` | Reactions and maximum moment for one transverse point load |
 | `simply_supported_multi_point_load_v1` | Reactions and piecewise shear/moment for multiple transverse point loads |
+| `simply_supported_signed_multi_point_load_v1` | Signed reactions and bending in one transverse plane |
+| `simply_supported_two_plane_point_load_v1` | Same-station resultant from two orthogonal signed point-load planes |
 
 The detailed assumptions and source relationships are in [Engineering Model Cards](knowledge/models/) and the [source registry](knowledge/sources.toml).
 
@@ -83,13 +101,13 @@ The same reviewed multi-point statics data can produce shear-force and bending-m
 
 ## Reproducible V1 Demo
 
-See [examples/v1-shaft-analysis/](examples/v1-shaft-analysis/) for a runnable and byte-verifiable example. This example reproduces the V1 end-to-end shaft-analysis workflow without requiring an LLM or DSH session.
+See [examples/v1-shaft-analysis/](examples/v1-shaft-analysis/) for the original one-plane workflow and [examples/v0.2-two-plane-shaft-analysis/](examples/v0.2-two-plane-shaft-analysis/) for the signed two-plane workflow. Both are deterministic reproductions without an LLM session.
 
 ## Why the Results Are Not Calculated by the LLM
 
 The LLM chooses and sequences the tools and explains their results. Python calculators compute engineering values; the Reviewer checks them; the provenance resolver identifies each model's assumptions and sources. During development, a chained LLM run introduced an incorrect intermediate bending moment while the downstream calculator remained internally consistent. Verified Handoff was added so the LLM does not manually retype upstream engineering values into downstream calculators. This layer applies to the supported torque + multi-point statics → combined sizing chain.
 
-## Setup and Quick Start
+## Developer setup
 
 The project requires Python 3.12 or later. The development and current acceptance environment used **Python 3.12**, **Node.js 24**, **DeepSeek Harness 0.2.0-rc.2**, and **Windows**. The package is configured for an editable source install and is not published to a package index.
 
@@ -157,7 +175,7 @@ The DSH session requires its normal model/provider configuration. Skill discover
 
 ## Tests
 
-The full suite passes **301 Python tests and 20 plugin tests** (including the reproducible V1 demo checks). From the repository root in PowerShell:
+At the v0.2 closure baseline, the full suite passed **301 Python tests and 20 plugin tests**. The reproducible demos are separate verification commands. From the repository root in PowerShell:
 
 ```powershell
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"
@@ -187,12 +205,12 @@ mechanical-design-agent/
 └─ pyproject.toml
 ```
 
-## Current Limitations
+## Current limitations
 
-- Shaft diameters are theoretical minima under implemented steady-load assumptions. There is no final production diameter selection, material database, fatigue analysis, stress-concentration treatment, keyway or shoulder effects, stiffness/deflection analysis, or critical-speed analysis.
-- Statics is limited to ideal simple supports, one plane, and same-direction transverse point loads within the supports. Distributed loads, overhung loads, opposite-direction or signed point loads, applied couples, two-plane bending, and bearing selection are unsupported.
-- CAD/CATIA and CAE integration are not implemented. The report output is HTML; PDF output is not implemented.
-- SVG rendering is integrated only for the multi-point statics model. The full HTML report requires the supported torque + multi-point statics + combined strength chain.
+- The restricted user runtime exposes the three verified workflows listed above. The broader Python library also contains V1 standalone models, diagrams, and an HTML report, with their own narrower contracts.
+- `d_min` is only a theoretical strength minimum for a solid circular shaft under the implemented steady-load assumptions. It is not a recommended manufacturing diameter.
+- The verified two-plane model accepts signed transverse point loads on or between two simple supports. It does not accept distributed loads, applied couples, overhangs, or axial loads.
+- Fatigue, stress concentration, material selection, preferred/production diameters, stiffness, deflection, critical speed, bearing selection, gear/belt load generation, CATIA, and CAE are outside the current verified workflow.
 
 ## Roadmap
 

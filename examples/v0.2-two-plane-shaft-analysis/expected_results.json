@@ -1,0 +1,11 @@
+{
+  "workflow_id": "verified_two_plane_shaft_strength_chain_v1",
+  "torque_nm": 54.713541666666664,
+  "plane_1_independent_peak_nmm": 133333.33333333334,
+  "plane_2_independent_peak_nmm": 133333.33333333334,
+  "critical_resultant_bending_moment_nmm": 149071.198499986,
+  "critical_resultant_bending_moment_nm": 149.071198499986,
+  "critical_positions_mm": [200.0, 400.0],
+  "min_diameter_mm": 27.24261631262692,
+  "reviews": {"torque": "PASS", "statics": "PASS", "combined": "PASS"}
+}
