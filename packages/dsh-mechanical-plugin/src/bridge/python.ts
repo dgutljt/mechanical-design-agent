@@ -63,7 +63,7 @@ async function probe(ctx: any, candidate: string, root: string, signal: AbortSig
   if (facts.contract_version !== CONTRACT_VERSION || facts.ok !== true ||
       !Array.isArray(facts.python_version) || facts.python_version[0] < 3 ||
       (facts.python_version[0] === 3 && facts.python_version[1] < 12) ||
-      facts.python_project_version !== '0.1.0' || facts.registry_reachable !== true ||
+      facts.python_project_version !== '0.2.0' || facts.registry_reachable !== true ||
       !source.toLowerCase().startsWith(intended.toLowerCase())) throw new Error('Python probe mismatch');
   return executable;
 }

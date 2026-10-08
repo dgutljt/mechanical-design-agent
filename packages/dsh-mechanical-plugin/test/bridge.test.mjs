@@ -9,7 +9,7 @@ const root = resolve(import.meta.dirname, '../../../');
 const config = { repositoryRoot: root, pythonExecutable: 'C:/mock/python.exe' };
 const input = { power_kw: 5.5, speed_rpm: 960 };
 const probe = JSON.stringify({ contract_version: '1', ok: true, python_version: [3, 12, 0],
-  python_project_version: '0.1.0', module_source: join(root, 'src/mechanical_agent/bridge/torque_adapter.py'),
+  python_project_version: '0.2.0', module_source: join(root, 'src/mechanical_agent/bridge/torque_adapter.py'),
   registry_reachable: true });
 const success = JSON.stringify({ contract_version: '1', ok: true, operation: 'transmitted_torque_v1',
   calculator_result: { torque_nm: 54.713541666666664 } });

@@ -10,7 +10,7 @@ const input = { power_kw: 5.5, speed_rpm: 960, span_mm: 600,
   plane_1_loads: [{ load_n: -1000, position_mm: 200 }],
   plane_2_loads: [{ load_n: -1000, position_mm: 400 }], allowable_shear_mpa: 40 };
 const probe = JSON.stringify({ contract_version: '1', ok: true, python_version: [3, 12, 0],
-  python_project_version: '0.1.0', module_source: join(root, 'src/mechanical_agent/bridge/torque_adapter.py'),
+  python_project_version: '0.2.0', module_source: join(root, 'src/mechanical_agent/bridge/torque_adapter.py'),
   registry_reachable: true });
 
 test('two-plane Native Tool exposes raw inputs only', () => {

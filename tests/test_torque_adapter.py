@@ -77,4 +77,4 @@ def test_probe_identity():
     facts = adapter.probe()
     assert facts["python_version"][:2] >= [3, 12]
     assert facts["registry_reachable"] is True
-    assert facts["python_project_version"] == "0.1.0"
+    assert facts["python_project_version"] == "0.2.0"

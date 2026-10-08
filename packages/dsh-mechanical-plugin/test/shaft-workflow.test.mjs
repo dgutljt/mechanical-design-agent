@@ -12,7 +12,7 @@ const input = { power_kw: 5.5, speed_rpm: 960, span_mm: 600,
   loads: [{ load_n: 1000, position_mm: 200 }, { load_n: 500, position_mm: 450 }],
   allowable_shear_mpa: 40 };
 const probe = JSON.stringify({ contract_version: '1', ok: true, python_version: [3, 12, 0],
-  python_project_version: '0.1.0', module_source: join(root, 'src/mechanical_agent/bridge/torque_adapter.py'),
+  python_project_version: '0.2.0', module_source: join(root, 'src/mechanical_agent/bridge/torque_adapter.py'),
   registry_reachable: true });
 const success = { contract_version: '1', ok: true, operation: 'verified_shaft_strength_v1',
   workflow_id: 'verified_shaft_strength_chain_v1',
@@ -28,7 +28,7 @@ const success = { contract_version: '1', ok: true, operation: 'verified_shaft_st
   provenance: { transmitted_torque_v1: { model: { model_id: 'transmitted_torque_v1' }, sources: [{}] },
     simply_supported_multi_point_load_v1: { model: { model_id: 'simply_supported_multi_point_load_v1' }, sources: [{}] },
     solid_shaft_combined_tresca_v1: { model: { model_id: 'solid_shaft_combined_tresca_v1' }, sources: [{}] } },
-  warnings: [], metadata: { python_project_version: '0.1.0' } };
+  warnings: [], metadata: { python_project_version: '0.2.0' } };
 
 function fakeContext(engineering = JSON.stringify(success), options = {}) {
   const calls = [];

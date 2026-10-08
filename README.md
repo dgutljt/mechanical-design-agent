@@ -1,6 +1,6 @@
 # Mechanical Design Agent
 
-**Current release:** 0.1.0 · **v0.2 candidate:** under review · **License:** [MIT](LICENSE)
+**Current release:** v0.2.0 · **License:** [MIT](LICENSE)
 
 ## Start here (Windows)
 
@@ -216,7 +216,7 @@ mechanical-design-agent/
 
 | Stage | Scope |
 | --- | --- |
-| **V1 · Current (0.1.0)** | Deterministic shaft-analysis workflow, Reviewer, provenance, SVG diagrams, HTML report |
+| **V1 · Released in v0.1.0** | Deterministic shaft-analysis workflow, Reviewer, provenance, SVG diagrams, HTML report |
 | **V1.5** | Native DSH mechanical plugin and typed tools |
 | **V2** | CATIA parameterized shaft generation |
 | **V3** | CAE verification and theory-versus-FEA comparison |
