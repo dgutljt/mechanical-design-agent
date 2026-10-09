@@ -2,6 +2,9 @@
 
 from dataclasses import asdict, dataclass, field
 from importlib import import_module
+from copy import deepcopy
+import hashlib
+import struct
 import json
 import math
 import sys
@@ -320,7 +323,7 @@ VERIFIERS = {
 }
 
 
-def review_engineering_result(result: dict) -> ReviewResult:
+def _review_snapshot(result: dict) -> ReviewResult:
     """Check structure, provenance, and independent model consistency."""
     review = ReviewResult()
     if not isinstance(result, dict):
@@ -412,6 +415,72 @@ def review_engineering_result(result: dict) -> ReviewResult:
         review.add("numerical_consistency", False,
                    f"numerical consistency check failed: {exc}")
     return review
+
+
+BINDING_VERSION = "engineering_object_binary64_v1"
+BINDING_PURPOSE = "mechanical_agent.review.actual_engineering_object"
+
+
+@dataclass(frozen=True, slots=True)
+class ObjectBinding:
+    version: str
+    purpose: str
+    sha256: str
+
+
+@dataclass(slots=True)
+class BoundReviewResult(ReviewResult):
+    object_binding: ObjectBinding | None = None
+
+
+def _encode_object(value: object) -> bytes:
+    """Strict, framed encoding; dict order is immaterial, array order is not."""
+    def frame(tag, payload):
+        return tag + struct.pack("!Q", len(payload)) + payload
+    kind = type(value)
+    if value is None:
+        return b"n"
+    if kind is bool:
+        return b"t" if value else b"f"
+    if kind is int:
+        return frame(b"i", str(value).encode("ascii"))
+    if kind is float:
+        return b"d" + struct.pack("!d", value)
+    if kind is str:
+        return frame(b"s", value.encode("utf-8", "surrogatepass"))
+    if kind is list:
+        return frame(b"l", b"".join(_encode_object(item) for item in value))
+    if kind is dict and all(type(key) is str for key in value):
+        return frame(b"o", b"".join(_encode_object(key) + _encode_object(value[key])
+                                    for key in sorted(value)))
+    raise ValueError("Object binding requires exact JSON-compatible Python types")
+
+
+def engineering_object_binding(result: object) -> ObjectBinding:
+    """Compute an identity for comparison; this function issues no review evidence."""
+    payload = _encode_object([BINDING_PURPOSE, BINDING_VERSION, result])
+    return ObjectBinding(BINDING_VERSION, BINDING_PURPOSE, hashlib.sha256(payload).hexdigest())
+
+
+def review_engineering_result(result: dict) -> ReviewResult:
+    """Legacy API and evidence schema, with unchanged numerical checks."""
+    return _review_snapshot(result)
+
+
+def review_bound_engineering_result(result: dict) -> BoundReviewResult:
+    """Review and bind one private snapshot, never attach identity to external evidence."""
+    # Reject custom objects before deepcopy can invoke their hooks.
+    _encode_object(result)
+    snapshot = deepcopy(result)
+    binding = engineering_object_binding(snapshot)
+    review = _review_snapshot(snapshot)
+    if engineering_object_binding(snapshot) != binding:
+        review.add("snapshot_unchanged", False, "Reviewed object changed during review")
+        binding = None
+    return BoundReviewResult(
+        status=review.status, model_id=review.model_id, checks=review.checks,
+        errors=review.errors, warnings=review.warnings,
+        reviewer_version=review.reviewer_version, object_binding=binding)
 
 
 def main() -> int:
