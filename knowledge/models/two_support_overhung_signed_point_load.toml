@@ -1,0 +1,16 @@
+model_id = "two_support_overhung_signed_point_load_v1"
+title = "Signed two-support overhung shaft point-load statics"
+status = "validated calculator model"
+calculator_module = "mechanical_agent.calculators.shaft_statics_overhung"
+calculator_function = "calculate_two_support_overhung_signed_point_loads"
+dsh_skill = "shaft-multi-point-load-statics"
+purpose = "Signed support reactions, event shear and bending across one or both overhangs."
+equation = "RA+RB+sum(Fi)=0; RB*L+sum(Fi*xi)=0; V(x)=sum(left forces); M(x)=sum(left forces*(x-force position)); dM/dx=V"
+derivation = "The source supports force and moment equilibrium and internal shear/moment methods. Signed overhang algebra, exact event positions, free-end boundary checks and critical tie/plateau representation are project mathematical derivations and implementation rules."
+sign_convention = "+x A-to-B; +q transverse; plane 1 +q=+y and M_z=M; plane 2 +q=+z and M_y=-M"
+inputs = ["support_span_mm=L>0", "left_overhang_mm=a>=0", "right_overhang_mm=b>=0; a+b>0", "loads: signed load_n and position_mm in [-a,L+b]; empty list permitted"]
+outputs = ["signed reactions", "complete event stations and segments", "signed extrema", "critical absolute moment and tie/plateau regions"]
+units = ["forces and reactions: N", "positions: mm", "moments: N*mm", "converted critical moment: N*m"]
+assumptions = ["Two ideal simple supports at x=0 and x=L.", "Static signed transverse point forces only.", "No applied bending couples; free-end moments are zero.", "Support moments may be nonzero."]
+limitations = ["No distributed loads, axial loads, deflection, fatigue or shaft sizing.", "No Native Tool exposure or Verified Handoff in this phase."]
+source_ids = ["engineering_statics_beam_equilibrium"]

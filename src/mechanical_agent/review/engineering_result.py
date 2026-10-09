@@ -9,11 +9,26 @@ import sys
 from mechanical_agent.knowledge_registry import resolve_model_provenance
 from mechanical_agent.review.signed_statics import verify as _signed_statics
 from mechanical_agent.review.two_plane_statics import verify as _two_plane_statics
+from mechanical_agent.review.overhung_statics import verify_one as _overhung_statics
+from mechanical_agent.review.overhung_statics import verify_two as _overhung_two_plane_statics
 
 REL_TOL = 1e-12
 ABS_TOL = 1e-12
 CRITERION = "maximum shear stress (Tresca)"
 CONTRACTS = {
+    "two_support_overhung_signed_point_load_v1": (
+        "mechanical_agent.calculators.shaft_statics_overhung",
+        "calculate_two_support_overhung_signed_point_loads",
+        ("support_span_mm", "left_overhang_mm", "right_overhang_mm", "total_load_n",
+         "reaction_a_n", "reaction_b_n", "signed_max_bending_moment_nmm",
+         "signed_min_bending_moment_nmm", "critical_bending_moment_nmm",
+         "critical_bending_moment_nm"), ("formula", "assumptions", "sign_convention")),
+    "two_support_overhung_two_plane_point_load_v1": (
+        "mechanical_agent.calculators.shaft_statics_overhung_two_plane",
+        "calculate_two_support_overhung_two_plane_point_loads",
+        ("support_span_mm", "left_overhang_mm", "right_overhang_mm",
+         "critical_resultant_bending_moment_nmm", "critical_resultant_bending_moment_nm"),
+        ("formula", "assumptions", "coordinate_convention")),
     "transmitted_torque_v1": (
         "mechanical_agent.calculators.torque", "calculate_transmitted_torque",
         ("power_kw", "speed_rpm", "torque_nm", "constant"), ("formula",)),
@@ -293,6 +308,8 @@ def _multi_statics(data: dict, review: ReviewResult) -> None:
 
 
 VERIFIERS = {
+    "two_support_overhung_signed_point_load_v1": _overhung_statics,
+    "two_support_overhung_two_plane_point_load_v1": _overhung_two_plane_statics,
     "transmitted_torque_v1": _torque,
     "solid_shaft_pure_torsion_v1": _pure,
     "solid_shaft_combined_tresca_v1": _combined,
@@ -323,6 +340,13 @@ def review_engineering_result(result: dict) -> ReviewResult:
     missing = [name for name in (*numeric, *metadata) if name not in result]
     if model_id == "simply_supported_signed_multi_point_load_v1":
         missing.extend(name for name in ("loads", "stations", "segments", "critical_moment_regions", "units")
+                       if name not in result)
+    if model_id == "two_support_overhung_signed_point_load_v1":
+        missing.extend(name for name in ("loads", "stations", "segments", "critical_moment_regions", "units")
+                       if name not in result)
+    if model_id == "two_support_overhung_two_plane_point_load_v1":
+        missing.extend(name for name in ("plane_1", "plane_2", "common_stations_mm",
+                                       "resultant_stations", "critical_stations", "critical_regions", "units")
                        if name not in result)
     if model_id == "simply_supported_two_plane_point_load_v1":
         missing.extend(name for name in ("plane_1", "plane_2", "common_stations_mm",

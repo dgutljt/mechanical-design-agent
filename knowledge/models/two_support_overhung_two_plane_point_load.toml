@@ -1,0 +1,16 @@
+model_id = "two_support_overhung_two_plane_point_load_v1"
+title = "Two-plane two-support overhung shaft point-load resultant bending"
+status = "validated calculator model"
+calculator_module = "mechanical_agent.calculators.shaft_statics_overhung_two_plane"
+calculator_function = "calculate_two_support_overhung_two_plane_point_loads"
+dsh_skill = "shaft-multi-point-load-statics"
+purpose = "Independent signed planes and same-position resultant bending across overhung shaft geometry."
+equation = "M_z=m1; M_y=-m2; R(x)=hypot(m1(x),m2(x)); Rcritical=max(R(common event stations))"
+derivation = "The source supports equilibrium and internal bending methods. Orthogonal resultant, common-event endpoint maximum search, critical ties and true component-constant plateaus are project mathematical derivations and implementation rules."
+coordinate_convention = "+x A-to-B; plane_1 +y; plane_2 +z; M_z=m1; M_y=-m2"
+inputs = ["support_span_mm=L>0", "left_overhang_mm=a>=0", "right_overhang_mm=b>=0; a+b>0", "plane_1_loads and plane_2_loads: signed load_n and position_mm in [-a,L+b]; empty lists permitted"]
+outputs = ["reviewable signed plane results", "common_stations_mm", "same-position resultant_stations", "critical_resultant_bending_moment_nmm and N*m", "critical_stations and critical_regions"]
+units = ["forces and reactions: N", "positions: mm", "component and resultant moments: N*mm", "converted critical resultant: N*m"]
+assumptions = ["Two ideal simple supports at x=0 and x=L with at least one overhang.", "Static signed point forces in two orthogonal transverse planes.", "No applied bending couples; free-end moments are zero."]
+limitations = ["No distributed loads, axial loads, deflection, fatigue or shaft sizing.", "No Native Tool exposure or Verified Handoff in this phase."]
+source_ids = ["engineering_statics_beam_equilibrium"]
