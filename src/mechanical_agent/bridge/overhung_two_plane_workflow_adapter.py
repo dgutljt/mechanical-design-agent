@@ -9,6 +9,7 @@ from mechanical_agent.workflows.verified_overhung_two_plane_shaft_strength impor
 )
 
 OPERATION = WORKFLOW_ID
+MAX_LOAD_RECORDS = 128
 
 
 def _failure(code, message):
@@ -20,8 +21,16 @@ def process(request):
     if (not isinstance(request, dict) or set(request) != {"contract_version", "operation", "input"}
             or request["contract_version"] != CONTRACT_VERSION or request["operation"] != OPERATION):
         return _failure("INVALID_TOOL_INPUT", "Expected supported contract_version, operation and input only")
+    inputs = request["input"]
+    if not isinstance(inputs, dict):
+        return _failure("INVALID_TOOL_INPUT", "Expected raw input object")
+    planes = [inputs.get(field) for field in ("plane_1_loads", "plane_2_loads")]
+    if (any(not isinstance(plane, list) for plane in planes)
+            or any(len(plane) > MAX_LOAD_RECORDS for plane in planes)
+            or sum(len(plane) for plane in planes) > MAX_LOAD_RECORDS):
+        return _failure("INVALID_TOOL_INPUT", "At most 128 raw load records total and per plane")
     try:
-        result = run_verified_overhung_two_plane_shaft_strength_chain(request["input"])
+        result = run_verified_overhung_two_plane_shaft_strength_chain(inputs)
     except Exception:
         return _failure("INTERNAL_ADAPTER_ERROR", "Verified chain failed")
     return {"contract_version": CONTRACT_VERSION, "operation": OPERATION,
