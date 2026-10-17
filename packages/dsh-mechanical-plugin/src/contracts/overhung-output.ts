@@ -129,7 +129,11 @@ const SAFE_ERRORS: Record<string, string> = {
   CALCULATOR_ERROR: 'Engineering calculation failed.', REVIEW_FAIL: 'Engineering review rejected the result.',
   REQUEST_BINDING_ERROR: 'Engineering request binding failed.', PROVENANCE_ERROR: 'Engineering provenance failed.',
   LINEAGE_ERROR: 'Engineering lineage failed.', INTERNAL_ADAPTER_ERROR: 'Engineering adapter failed.',
-  TIMEOUT: 'Engineering operation timed out.', CANCELLED: 'Engineering operation cancelled.'
+  TIMEOUT: 'Engineering operation timed out.', CANCELLED: 'Engineering operation cancelled.',
+  RESOURCE_BUSY: 'Engineering execution is busy.', ISOLATION_UNAVAILABLE: 'Required process isolation is unavailable.',
+  RESOURCE_LIMIT: 'Engineering resource limit reached.', REAP_FAILED: 'Engineering isolation requires recovery.',
+  PROBE_FAILED: 'Interpreter verification failed.', OUTPUT_INVALID: 'Engineering output is invalid.',
+  OUTPUT_TRUNCATED: 'Engineering output is incomplete.'
 };
 const failure = object({ contract_version: literal(CONTRACT_VERSION), operation: literal(OPERATION), ok: literal(false),
   error: object({ code: (v: any) => typeof v === 'string' && Object.hasOwn(SAFE_ERRORS, v), message: text }), metadata },
