@@ -45,7 +45,7 @@ function mockRuntime() {
     spawn(spec) {
       calls.push(spec.argv.includes('--probe') ? 'probe' : 'compute');
       const stdout = spec.argv.includes('--probe') ? JSON.stringify({ contract_version: '1', ok: true,
-        python_version: [3, 12, 0], python_project_version: '0.2.0', registry_reachable: true,
+        python_version: [3, 12, 0], python_project_version: '0.3.0', registry_reachable: true,
         module_source: join(root, 'src/mechanical_agent/bridge/torque_adapter.py') }) : '{}';
       return { done: Promise.resolve({ exitCode: 0 }), terminate() {}, async waitForExit() { return true; },
         collected: { stdout: { readFrom: () => ({ text: stdout, lossy: false }) },

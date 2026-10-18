@@ -9,7 +9,7 @@ const root = resolve(import.meta.dirname, '../../../');
 const config = { repositoryRoot: root, pythonExecutable: 'C:/mock/python.exe' };
 const input = { power_kw: 5.5, speed_rpm: 960 };
 const probe = JSON.stringify({ contract_version: '1', ok: true, python_version: [3, 12, 0],
-  python_project_version: '0.2.0', module_source: join(root, 'src/mechanical_agent/bridge/torque_adapter.py'),
+  python_project_version: '0.3.0', module_source: join(root, 'src/mechanical_agent/bridge/torque_adapter.py'),
   registry_reachable: true });
 const success = JSON.stringify({ contract_version: '1', ok: true, operation: 'transmitted_torque_v1',
   calculator_result: { torque_nm: 54.713541666666664 } });
@@ -21,7 +21,7 @@ function fakeContext(engineering = success, options = {}) {
     spawn(spec) {
       calls.push(spec);
       const isProbe = spec.argv.includes('--probe');
-      const text = isProbe ? probe : engineering;
+      const text = isProbe ? options.probe ?? probe : engineering;
       return {
         done: Promise.resolve({ exitCode: isProbe ? 0 : options.exitCode ?? 0, signal: null }),
         collected: {
@@ -49,6 +49,18 @@ test('explicit wrong interpreter fails closed', async () => {
   const value = await callTorque(ctx, config, input, new AbortController().signal);
   assert.equal(value.error.code, 'PYTHON_RESOLUTION_ERROR');
   assert.equal(ctx.calls.length, 0);
+});
+
+test('project version probe accepts only 0.3.0 and rejects unproven versions before computation', async () => {
+  for (const version of ['0.2.0', '0.3.1', '0.3.0-forged', null, 0.3, {}, undefined]) {
+    const facts = { ...JSON.parse(probe), python_project_version: version };
+    const ctx = fakeContext(success, { probe: JSON.stringify(facts) });
+    const value = await callTorque(ctx, config, input, new AbortController().signal);
+    assert.equal(value.error.code, 'PYTHON_RESOLUTION_ERROR');
+    assert.equal('calculator_result' in value, false);
+    assert.equal(ctx.calls.length, 1, 'incompatible environment must never reach the calculator');
+    assert.ok(ctx.calls[0].argv.includes('--probe'));
+  }
 });
 
 test('dedicated Python environment variable is probed before automatic candidates', async () => {

@@ -63,7 +63,7 @@ async function resolvePython(config: any, root: string, payload: string) {
       const facts = JSON.parse(await run(python, root, true, payload));
       const source = await realpath(join(root, 'src', 'mechanical_agent', 'bridge', 'torque_adapter.py'));
       if (facts.contract_version !== '1' || facts.ok !== true || facts.python_version?.[0] !== 3 || facts.python_version[1] < 12 ||
-          facts.python_project_version !== '0.2.0' || facts.registry_reachable !== true ||
+          facts.python_project_version !== '0.3.0' || facts.registry_reachable !== true ||
           typeof facts.module_source !== 'string' || (await realpath(facts.module_source)).toLowerCase() !== source.toLowerCase() ||
           typeof facts.repository_root !== 'string' || (await realpath(facts.repository_root)).toLowerCase() !== root.toLowerCase()) fail('PROBE_FAILED');
       return python;

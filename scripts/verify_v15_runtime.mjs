@@ -2,7 +2,7 @@
 // Run from any directory: node scripts/verify_v15_runtime.mjs
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,8 +23,195 @@ const report = (code, ok, detail = '') => {
 };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const sorted = x => [...x].sort();
+// Reviewed pressure exclusions only. This entry has no pressure opt-in mode.
+const pressureScenarios = ['a1-memory', 'memory-counters',
+  'memory-study-1-parallel', 'memory-study-8-parallel', 'memory-study-32-parallel',
+  'memory-study-1-serial', 'memory-study-8-serial', 'memory-study-32-serial', 'memory-native-attempt'];
+const supervisorSuiteSha256 = '6b8c3c0a04b9bd33b91433d6f5bf3e7ea5b0a0998d099aded2152b63986e926a';
+function checkPressurePolicy() {
+  // Pin the existing scenario list AND skip predicate before executing any test.
+  // Even a new memory-study-* case must trigger review, never a silent extra skip.
+  const source = readFileSync(join(plugin, 'test/supervisor-windows.test.mjs'), 'utf8').replaceAll('\r\n', '\n');
+  const digest = createHash('sha256').update(source).digest('hex');
+  if (digest !== supervisorSuiteSha256) throw Error('Memory-pressure test entry changed; review the exact nine exclusions before running tests.');
+  console.log('MEMORY_PRESSURE_EXCLUDED', JSON.stringify(pressureScenarios));
+}
+// Strict grammar for the Node 24 TAP reporter used below, not a general TAP reader.
+// Plans count direct children; summary.tests counts every type:'test' node once,
+// including test parents, but excludes type:'suite' nodes (summary.suites).
+// Unsupported dialects, ambiguous diagnostics and all non-success results fail closed.
+function parsePluginTap(result) {
+  if (result.error || result.signal || result.status !== 0)
+    throw Error(`Plugin process incomplete: ${result.error?.message ?? result.signal ?? result.status}`);
+  // Keep raw bytes until fatal decoding: U+FFFD itself is a valid test name,
+  // whereas an invalid UTF-8 sequence must never be silently replaced by it.
+  if (!Buffer.isBuffer(result.stdout)) throw Error('Plugin TAP requires raw output bytes');
+  const output = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(result.stdout);
+  if (!output.endsWith('\n')) throw Error('Plugin TAP missing or truncated');
+  const lines = output.replaceAll('\r\n', '\n').split('\n');
+  lines.pop();
+  let cursor = 0;
+  const invalid = message => { throw Error(`Plugin TAP line ${cursor + 1}: ${message}`); };
+  const take = expected => { if (lines[cursor++] !== expected) invalid(`expected ${expected}`); };
+  const integer = text => {
+    if (!/^(0|[1-9]\d*)(?![\s\S])/.test(text) || !Number.isSafeInteger(Number(text))) invalid('invalid integer');
+    return Number(text);
+  };
+  const summaryKeys = ['tests', 'suites', 'pass', 'fail', 'cancelled', 'skipped', 'todo', 'duration_ms'];
+  // Lines are split at LF. Unlike JS '$', (?![\s\S]) requires the real end;
+  // unlike '.', [\s\S] also accepts legal U+2028/U+2029 in test names.
+  function comments(depth, afterResult) {
+    // Node flushes t.diagnostic() after the owning result's YAML, at that
+    // result's depth. Its text may be identical to a real Subtest marker.
+    // Read only this scope's contiguous comments. Before a result/child scope,
+    // the LAST line must be the actual start; before a plan all are diagnostics.
+    // Never scan past a control line, YAML field, or different indentation.
+    const prefix = '    '.repeat(depth) + '# ';
+    let start;
+    while ((lines[cursor] ?? '').startsWith(prefix)) {
+      if (!afterResult && start !== undefined) invalid('test start without result');
+      const line = lines[cursor++];
+      start = line.startsWith(prefix + 'Subtest: ')
+        ? line.slice((prefix + 'Subtest: ').length) : undefined;
+    }
+    return start;
+  }
+  function scope(depth) {
+    if (depth > 64) invalid('nesting limit exceeded');
+    const indent = '    '.repeat(depth);
+    const records = [];
+    for (;;) {
+      const name = comments(depth, records.length > 0);
+      const line = lines[cursor] ?? '';
+      if (line.startsWith(indent + '1..')) {
+        if (!records.length && name !== undefined) invalid('test start without result');
+        const plan = line.slice(indent.length + 3);
+        if (integer(plan) !== records.length) invalid('plan/result count mismatch');
+        cursor++;
+        return records;
+      }
+      if (name === undefined) invalid('missing test start, result or trailing plan');
+      if (!name) invalid('empty test name');
+      const childIndent = indent + '    ';
+      const nested = (lines[cursor] ?? '').startsWith(childIndent + '# Subtest: ') ||
+        (lines[cursor] ?? '').startsWith(childIndent + '1..');
+      const children = nested ? scope(depth + 1) : [];
+      const control = lines[cursor] ?? '';
+      // Reject not ok even with SKIP/TODO/EXPECTED FAILURE or a forged green
+      // summary. Cancellation diagnostics need not be guessed to reject failure.
+      if (control.startsWith(indent + 'not ok ')) invalid('real failing/cancelled test result');
+      if (!control.startsWith(indent + 'ok ')) invalid('missing or wrongly indented test result');
+      const match = new RegExp('^' + indent + String.raw`ok ([1-9]\d*) - ([\s\S]+?)(?: # (SKIP|TODO|EXPECTED FAILURE)(?: ([\s\S]*))?)?(?![\s\S])`).exec(control);
+      if (!match || integer(match[1]) !== records.length + 1 || match[2] !== name)
+        invalid('missing, duplicate, out-of-order or mismatched test result');
+      // A bare hash in a name is not Node TAP escaping. Do not mistake an
+      // unsupported directive for part of a successful test name.
+      if (/(^|[^\\])(?:\\\\)*#/.test(name)) invalid('unescaped hash in test name');
+      const directive = match[3], reason = match[4] ?? '';
+      if (directive && directive !== 'SKIP') invalid('unsupported non-executed test status');
+      if (directive && nested) invalid('skipped parent with child results');
+      cursor++;
+      take(indent + '  ---');
+      // Validate the FULL raw prefix and grammar before extracting anything.
+      // Slicing unverified indentation here can swallow 'not ok' or 'Bail out!'.
+      const durationLine = lines[cursor++] ?? '';
+      if (!durationLine.startsWith(indent + '  duration_ms: ')) invalid('missing or wrongly indented test duration');
+      const duration = new RegExp('^' + indent + String.raw`  duration_ms: ((?:0|[1-9]\d*)(?:\.\d+)?)(?![\s\S])`).exec(durationLine);
+      if (!duration || !Number.isFinite(Number(duration[1])))
+        invalid('missing or invalid test duration');
+      const typeLine = lines[cursor++];
+      const type = typeLine === indent + "  type: 'test'" ? 'test'
+        : typeLine === indent + "  type: 'suite'" ? 'suite' : null;
+      if (!type) invalid('missing or unsupported result type');
+      // Successful Node records contain only duration and type. Error YAML,
+      // extra fields and unterminated blocks cannot conceal TAP controls here.
+      take(indent + '  ...');
+      records.push({ name, type, directive, reason, depth, children });
+    }
+  }
+  take('TAP version 13');
+  const records = scope(0);
+  if (!records.length) invalid('empty test file');
+  // The root plan closes the record/diagnostic region. From this point require
+  // exactly one complete, ordered summary; do not skip summary-like comments.
+  const counts = {};
+  for (const key of summaryKeys) {
+    const prefix = `# ${key} `;
+    const line = lines[cursor++] ?? '';
+    if (!line.startsWith(prefix)) invalid(`missing or duplicate summary: ${key}`);
+    const value = line.slice(prefix.length);
+    if (key === 'duration_ms') {
+      if (!/^(?:0|[1-9]\d*)(?:\.\d+)?(?![\s\S])/.test(value) || !Number.isFinite(Number(value))) invalid('invalid summary duration');
+    } else counts[key] = integer(value);
+  }
+  if (cursor !== lines.length) invalid('duplicate summary or trailing output');
+  const actual = { tests: 0, suites: 0, pass: 0, fail: 0, cancelled: 0, skipped: 0, todo: 0 };
+  const skipped = [];
+  function count(nodes) {
+    for (const node of nodes) {
+      if (node.directive) {
+        if (node.type !== 'test' || node.depth !== 0) invalid('unsupported suite/nested skip');
+        skipped.push(node);
+      }
+      if (node.type === 'suite') actual.suites++;
+      else { actual.tests++; actual[node.directive ? 'skipped' : 'pass']++; }
+      count(node.children);
+    }
+  }
+  count(records);
+  if (!Object.keys(actual).every(key => actual[key] === counts[key])) invalid('record/summary mismatch');
+  if (!actual.pass) invalid('no executed tests in file');
+  return { counts: actual, skipped };
+}
+function checkPluginSummary(result, expectedSkips = pressureScenarios.map(s => 'Windows bounded supervisor: ' + s)) {
+  const parsed = parsePluginTap(result);
+  if (!same(sorted(parsed.skipped.map(node => node.name)), sorted(expectedSkips)) ||
+    parsed.skipped.some(node => node.reason !== 'Memory pressure explicitly excluded for this run'))
+    throw Error('Plugin TAP does not contain the exact approved pressure skip records');
+  return parsed.counts;
+}
+function runPluginTests(testFiles) {
+  if (!testFiles.length || new Set(testFiles).size !== testFiles.length ||
+    !testFiles.includes(join(plugin, 'test', 'supervisor-windows.test.mjs')))
+    throw Error('Plugin test file inventory is incomplete');
+  const totals = { tests: 0, suites: 0, pass: 0, fail: 0, cancelled: 0, skipped: 0, todo: 0 };
+  // Keep the same built-in TAP result channel. Each file gets its own bounded
+  // process, with no inner file process: Node's default process isolation can
+  // synthesize a green file result after an early process.exit(0), hiding the
+  // missing in-file plan/summary. Here early exit leaves incomplete TAP instead.
+  // Raw application stdout goes to stderr, distinct from the reporter's TAP.
+  const bootstrap = `
+    const { run } = require('node:test');
+    const { tap } = require('node:test/reporters');
+    const output = process.stdout.write.bind(process.stdout);
+    process.stdout.write = process.stderr.write.bind(process.stderr);
+    const stream = run({ files: [process.argv[1]], concurrency: 1, isolation: 'none' });
+    stream.on('test:fail', () => { process.exitCode = 1; });
+    (async () => { for await (const chunk of tap(stream)) output(chunk); })()
+      .catch(error => { console.error(error); process.exitCode = 1; });
+  `;
+  const deadline = Date.now() + 360000;
+  // Both files and their tests stay serial. No pressure opt-in exists.
+  for (const [index, file] of testFiles.entries()) {
+    const timeout = deadline - Date.now();
+    if (timeout <= 0) throw Error('Plugin test run timed out before all files completed');
+    const result = run(`plugin-tests-${index + 1}`, process.execPath,
+      ['--test-concurrency=1', '-e', bootstrap, file],
+      { timeout, rawOutput: true, env: { MECHANICAL_SUPERVISOR_SKIP_MEMORY_PRESSURE: '1' } });
+    const expectedSkips = file === join(plugin, 'test', 'supervisor-windows.test.mjs')
+      ? pressureScenarios.map(s => 'Windows bounded supervisor: ' + s) : [];
+    const counts = checkPluginSummary(result, expectedSkips);
+    for (const key of Object.keys(totals)) totals[key] += counts[key];
+    console.log('PLUGIN_TEST_FILE', JSON.stringify({ file, ...counts }));
+  }
+  if (totals.skipped !== pressureScenarios.length) throw Error('Plugin pressure skip total mismatch');
+  console.log('PLUGIN_TEST_SUMMARY', JSON.stringify({ total: totals.tests, suites: totals.suites,
+    executed: totals.pass, passed: totals.pass, failed: totals.fail, cancelled: totals.cancelled,
+    skipped: totals.skipped, todo: totals.todo, completedFiles: testFiles.length }));
+}
+
 function run(label, command, args, options = {}) {
-  const result = spawnSync(command, args, { cwd: root, encoding: 'utf8', timeout: options.timeout ?? 240000,
+  const result = spawnSync(command, args, { cwd: root, encoding: options.rawOutput ? null : 'utf8', timeout: options.timeout ?? 240000,
     maxBuffer: 16 * 1024 * 1024, env: { ...process.env, ...options.env }, windowsHide: true });
   writeFileSync(join(traceDir, `${label}.stdout`), result.stdout ?? '');
   writeFileSync(join(traceDir, `${label}.stderr`), result.stderr ?? '');
@@ -136,6 +323,7 @@ const dsh = process.env.DSH_CLI ? { command: process.execPath, prefix: [resolve(
   : existsSync(dshLocal) ? { command: process.execPath, prefix: [dshLocal] }
     : { command: npm.command, prefix: [...npm.prefix, 'exec', '--yes', '--package=@deepseek-ai/dsh@0.2.0-rc.2', '--', 'dsh'] };
 try {
+  checkPressurePolicy();
   const before = run('git-before', 'git', ['status', '--porcelain']);
   const version = dshRun('dsh-version', ['-V']);
   must(version.stdout.trim() === policy.dshVersion, 'RUNTIME_VERSION_MISMATCH', version.stdout.trim());
@@ -196,8 +384,11 @@ try {
     x.type === 'tool_result' && x.callId === call.callId && x.status === 'completed')),
     'DEVELOPER_PWSH_SMOKE');
   const python = process.env.MECHANICAL_AGENT_PYTHON || 'python';
-  run('python-tests', python, ['-m', 'pytest'], { env: { PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1', PYTHONPATH: 'src' } });
-  run('plugin-tests', npm.command, [...npm.prefix, 'test', '--prefix', plugin]);
+  const pythonTests = run('python-tests', python, ['-m', 'pytest'], { env: { PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1', PYTHONPATH: 'src' } });
+  console.log('PYTHON_TEST_SUMMARY', (pythonTests.stdout ?? '').trim().split(/\r?\n/).at(-1));
+  const testFiles = readdirSync(join(plugin, 'test')).filter(name => name.endsWith('.test.mjs')).sort()
+    .map(name => join(plugin, 'test', name));
+  runPluginTests(testFiles);
   run('demo-verify', python, ['examples/v1-shaft-analysis/run_demo.py', '--verify'], { env: { PYTHONPATH: 'src' } });
   const after = run('git-after', 'git', ['status', '--porcelain']);
   must(before.stdout === after.stdout, 'SOURCE_MUTATION_DETECTED');
