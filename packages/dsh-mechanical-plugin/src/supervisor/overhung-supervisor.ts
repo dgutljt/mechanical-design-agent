@@ -1,9 +1,10 @@
-// Unregistered new-overhung entry. Legacy Bridge and registrations do not import it.
+// Dedicated overhung entry. Legacy Bridge and registrations never import it.
 import { preflightOverhungInput } from '../contracts/overhung-input.js';
 import { decodeOverhungResponse, validateOverhungResponse } from '../contracts/overhung-output.js';
 import { runWindowsSession, sessionTermination, monotonicNow, RUN_MS } from './windows-session.js';
 import { windowsNative } from './windows-native.js';
 import { types } from 'node:util';
+import { preflightOverhungString, assertUniqueJsonKeys, serializeOverhungResponse } from '../contracts/overhung-transport.js';
 const slotKey = Symbol.for('mechanical-agent.overhung-supervisor.slot.v1');
 const host = process as any;
 if (!host[slotKey]) Object.defineProperty(host, slotKey, { value: { state: 'IDLE', rescue: undefined, generation: 0 }, writable: false });
@@ -27,15 +28,21 @@ function boundToRequest(value: any, request: any) {
     Object.is(input.allowable_shear_mpa, results.combined.allowable_shear_mpa) &&
     ['support_span_mm', 'left_overhang_mm', 'right_overhang_mm'].every(k => Object.is(input[k], statics[k])) &&
     ['plane_1', 'plane_2'].every(plane => {
-      const loads = input[plane + '_loads'], actual = statics[plane].loads;
+      // Python float keys sort ascending and compare +/-0 as equal. ECMAScript's
+      // stable sort with relational comparisons has the same finite-binary64
+      // ordering (without subtraction/rounding). Sort only this trusted private
+      // comparison array; retain the original request and never reorder output.
+      const loads = [...input[plane + '_loads']].sort((a, b) =>
+        a.position_mm < b.position_mm ? -1 : a.position_mm > b.position_mm ? 1 : 0);
+      const actual = statics[plane].loads;
       return loads.length === actual.length && loads.every((load: any, i: number) => Object.is(load.load_n, actual[i].load_n) && Object.is(load.position_mm, actual[i].position_mm));
     });
 }
 // There is deliberately no backend, runner, limit or module override here.
-export async function executeOverhung(config: any, args: any, signal: AbortSignal) {
+async function executeEntry(config: any, args: any, signal: AbortSignal, nativeTransport = false) {
   const expires = monotonicNow() + RUN_MS;
   const termination = sessionTermination(expires, signal);
-  try {
+  async function executeBound() {
     // Bound the shape BEFORE the generic P1A snapshot. Reject accessors/proxies
     // without invoking user code and reject unexpected subtrees before traversal.
     const fields = ['power_kw', 'speed_rpm', 'support_span_mm', 'left_overhang_mm', 'right_overhang_mm',
@@ -54,7 +61,12 @@ export async function executeOverhung(config: any, args: any, signal: AbortSigna
     }
     let prepared;
     try {
-      const bounded = data(args, fields);
+      const source = nativeTransport ? data(args, ['request_json']).request_json : args;
+      if (nativeTransport && typeof source !== 'string') throw Error();
+      if (typeof source === 'string') {
+        prepared = preflightOverhungString(source);
+      } else {
+      const bounded = data(source, fields);
       for (const field of fields) {
         const v = bounded[field];
         if (!field.endsWith('_loads')) { if (typeof v !== (field === 'assume_constant_torque_over_shaft' ? 'boolean' : 'number')) throw Error(); continue; }
@@ -69,6 +81,7 @@ export async function executeOverhung(config: any, args: any, signal: AbortSigna
         });
       }
       prepared = preflightOverhungInput(bounded);
+      }
     } catch { return failure(termination.observe() ?? 'INVALID_TOOL_INPUT'); }
     if (termination.observe()) return failure(termination.observe()!);
     if (slot.state === 'BLOCKED') return failure('REAP_FAILED');
@@ -89,6 +102,7 @@ export async function executeOverhung(config: any, args: any, signal: AbortSigna
         repositoryRoot: config.repositoryRoot, ...(config.pythonExecutable === undefined ? {} : { pythonExecutable: config.pythonExecutable })
       } });
       result = await runWindowsSession({ request, cwd: process.cwd(), expires, termination }, text => {
+        assertUniqueJsonKeys(text);
         const decoded = decodeOverhungResponse(text);
         if (!boundToRequest(decoded, prepared!.request)) return false;
         value = decoded; return true;
@@ -113,7 +127,30 @@ export async function executeOverhung(config: any, args: any, signal: AbortSigna
         catch { slot.state = 'BLOCKED'; return failure('REAP_FAILED'); }
       }
     }
+  }
+  const carrierFailure = (code: string) => Object.freeze({
+    // Only fixed, validated failure strings are encoded by the ordinary codec;
+    // this fallback contains no engineering numbers or caller diagnostics.
+    response_json: JSON.stringify(failure(code))
+  });
+  try {
+    const value = await executeBound();
+    if (!nativeTransport) return value;
+    if (value.ok && termination.observe()) return carrierFailure(termination.observe()!);
+    try {
+      const response_json = serializeOverhungResponse(value);
+      if (value.ok && termination.observe()) return carrierFailure(termination.observe()!);
+      return Object.freeze({ response_json });
+    } catch { return carrierFailure(termination.observe() ?? 'OUTPUT_INVALID'); }
   } finally { termination.dispose(); }
+}
+// Both public APIs enter the SAME clock before inspecting/decoding caller data.
+// No caller-supplied deadline, backend, runner or resource override is accepted.
+export function executeOverhung(config: any, args: any, signal: AbortSignal) {
+  return executeEntry(config, args, signal);
+}
+export function executeOverhungNative(config: any, args: any, signal: AbortSignal) {
+  return executeEntry(config, args, signal, true);
 }
 export function overhungSupervisorState() { return slot.state as 'IDLE' | 'RUNNING' | 'BLOCKED'; }
 // Explicit host/operator action only. No force-reset and no automatic recovery.

@@ -1,0 +1,43 @@
+{
+  "dshVersion": "0.2.0-rc.2",
+  "legacyConfigSha256": "e9b7b1be116bad10696526c20c8a8f719539dbdef09eec97732ab99d6dcee809",
+  "configSha256": "34705c05476f7224b8763b6220475fe8932a09dd09c44c00bb1e0d12ddcb6e79",
+  "newTool": "verified_overhung_two_plane_shaft_strength_chain_v1",
+  "bundles": [
+    "@deepseek-ai/dsh-base",
+    "@deepseek-ai/dsh-headless"
+  ],
+  "allowed": [
+    "analyze_verified_shaft_strength",
+    "analyze_verified_two_plane_shaft_strength",
+    "calculate_transmitted_torque",
+    "create_goal",
+    "exit_plan_mode",
+    "get_goal",
+    "glob",
+    "grep",
+    "skill",
+    "todo_write",
+    "update_goal",
+    "verified_overhung_two_plane_shaft_strength_chain_v1"
+  ],
+  "restrictedPluginIds": [
+    "tool-pwsh",
+    "tool-bash",
+    "tool-fs",
+    "tool-jobs",
+    "tool-web",
+    "tool-subagent",
+    "tool-subagent-fork",
+    "tool-subagent-control",
+    "tool-subagent-list-agents",
+    "tool-workflow",
+    "workflow-ptc",
+    "ptc-runtime",
+    "tool-plugin-manager",
+    "plugin-manager",
+    "config-editor",
+    "settings"
+  ],
+  "legacyToolsSha256": "450bbbe79099d81afe0f0fb6a8a4daec7b3b8e0f1d767390687ee77cbb415ad2"
+}
