@@ -2,6 +2,8 @@
 
 **Project target:** v0.3.0 (release-preparation candidate; not yet released) · **Published baseline:** v0.2.0 · **License:** [MIT](LICENSE)
 
+**SOURCE-ONLY candidate; release BLOCKED (2026-10-20).** Read the [source deployment scope, evidence and release gates](docs/V0_3_SOURCE_ONLY_DEPLOYMENT.md) before using the setup or acceptance commands below. C2 verified source deployment under existing dependency conditions, but Plugin regression was **136 passed, 1 failed (`a1-lifecycle`), 9 skipped**; V1.5 was not run. C3 remains **INSUFFICIENT EVIDENCE / BLOCKED**. C4-S0 is not independently accepted; dynamic C4 has not run and VM work is paused. Full regression must await independent permission to resume. This is not release authorization.
+
 ## Start here (Windows)
 
 1. Double-click [start-mechanical-dsh.cmd](start-mechanical-dsh.cmd) in this folder.
@@ -116,13 +118,13 @@ The LLM chooses and sequences the tools and explains their results. Python calcu
 
 The Python and Plugin project versions target **0.3.0**. The separate DSH runtime, DSH Tools and Win32 process provider stay pinned to **0.2.0-rc.2**; project and runtime version numbers are not interchangeable. Both Python execution paths require the exact project version reported from this checkout's `pyproject.toml`. An old or unproven project version is an environment compatibility failure, not evidence of a Calculator regression.
 
-Source project identity and installed distribution metadata are separate checks. This round did not reinstall the project; an existing environment may retain older `importlib.metadata`/pip metadata. Verify the actual probe's project version and source path for this source-based runtime. Do not treat this check as proof that a v0.3 distribution was installed or packaged.
+Source project identity and installed distribution metadata are separate checks. The earlier release-preparation reproduction did not reinstall the project; an existing environment may retain older `importlib.metadata`/pip metadata. C2 later verified an isolated editable source installation with metadata 0.3.0; see the [current source deployment scope](docs/V0_3_SOURCE_ONLY_DEPLOYMENT.md). Verify the actual probe's project version and source path for this source-based runtime. Do not treat the source probe alone as proof of an ordinary v0.3 wheel installation or packaged deployment.
 
 Requirements: Python >=3.12, Node >=24, Windows x64 for the overhung Supervisor, functioning creation-time Job-list attributes and nested Jobs, DSH/DSH Tools/Win32 process provider 0.2.0-rc.2, and Koffi **3.1.1**. Koffi is an existing pinned dependency of the Win32 provider. The engineering Job has no weaker fallback. Tests also need pytest; the source build uses Node's built-in TypeScript stripping and needs no separate TypeScript compiler.
 
-The verified local reproduction environment is Windows 11 x64 (10.0.26200), Node 24.18.0, Python 3.14.6, pytest 9.0.3, setuptools 83.0.0, Schemastery 3.18.4 and the pinned components above. Reproduction used a clean source copy and an existing dependency cache, without installing or upgrading dependencies. It does **not** prove fresh-machine installation, all Windows versions, or the minimum Python/Node versions. There is no complete npm lock file; dependency resolution on a new machine remains a release risk. Registry lookup requires the source checkout's `knowledge/` directory; wheel packaging of that data is deferred. The package is not published to a package index.
+The earlier release-preparation reproduction environment was Windows 11 x64 (10.0.26200), Node 24.18.0, Python 3.14.6, pytest 9.0.3, setuptools 83.0.0, Schemastery 3.18.4 and the pinned components above. Reproduction used a clean source copy and an existing dependency cache, without installing or upgrading dependencies. It does **not** prove fresh-machine installation, all Windows versions, or the minimum Python/Node versions. There is no complete npm lock file; dependency resolution on a new machine remains a release risk. Registry lookup requires the source checkout's `knowledge/` directory; wheel packaging of that data is deferred. The package is not published to a package index.
 
-For initial setup, create and activate a compatible Python environment; [environment.yml](environment.yml) provides the Python 3.12/pytest Conda specification. The documented source-install command below is setup guidance; it was not rerun during this cache-based release-preparation check:
+For initial setup, create and activate a compatible Python environment; [environment.yml](environment.yml) provides the Python 3.12/pytest Conda specification. The source-install command below remains setup guidance; its default dependency acquisition has not been verified on a fresh machine. C2 separately verified offline editable installation with pre-existing trusted build tools, as detailed in the source deployment scope:
 
 ```powershell
 python -m pip install -e .
@@ -257,7 +259,7 @@ These are committed-memory controls and software deadlines, not a guarantee that
 
 ## Tests
 
-The Phase 14D-A source baseline ran **853 Python tests**, **136 passing Plugin tests with nine pressure tests skipped**, and V1/Golden plus the two-plane demo successfully. Those are historical baseline observations, not a claim that this release-preparation candidate has independent technical PASS. Use the V1.5 entry above for the default safe full check, and the P1C entry for real 11/12 Tool validation. Standalone deterministic checks from the repository root:
+The Phase 14D-A source baseline ran **853 Python tests**, **136 passing Plugin tests with nine pressure tests skipped**, and V1/Golden plus the two-plane demo successfully. Those are historical baseline observations, not a claim that this release-preparation candidate has independent technical PASS. After independent permission to resume the blocked acceptance work, the V1.5 entry supplies the pressure-skip policy and the P1C entry supplies real 11/12 Tool validation. Neither historical results nor these command examples authorize execution during the current block. Standalone deterministic check references from the repository root:
 
 ```powershell
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"

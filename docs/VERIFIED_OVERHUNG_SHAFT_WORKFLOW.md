@@ -7,6 +7,8 @@ still mounts eleven Tools and the three existing engineering operations; the
 explicit profile adds only this twelfth Tool. The old two-plane workflow is unchanged.
 This release-preparation candidate awaits independent review and Gatekeeper approval.
 
+**Current release status: BLOCKED (2026-10-20).** See the [SOURCE-ONLY deployment scope](V0_3_SOURCE_ONLY_DEPLOYMENT.md) for C2 evidence and remaining gates. C2 Plugin regression has one `a1-lifecycle` failure and nine skipped pressure tests; C3 remains INSUFFICIENT EVIDENCE / BLOCKED. C4-S0 is not independently accepted, dynamic C4 has not run, and VM work is paused. Do not resume full acceptance from the commands below without independent permission to continue.
+
 Older model-card notes about Native/Handoff exposure record their original phase's
 scope. The explicit exposure described here adds no change to those models'
 engineering assumptions or limitations.
@@ -204,18 +206,21 @@ bound is claimed.
 
 Required: Windows x64, Node >=24, Python >=3.12, working creation-time Job-list and
 nested Jobs, installed DSH/DSH Tools/Win32 provider 0.2.0-rc.2 and Koffi 3.1.1.
-The verified local environment is Windows 11 x64 10.0.26200, Node 24.18.0, Python
+The earlier release-preparation environment was Windows 11 x64 10.0.26200, Node 24.18.0, Python
 3.14.6, pytest 9.0.3 and Schemastery 3.18.4. Both runtime probes require Python
 project identity 0.3.0 and retain their source checks; a mismatched identity is an
 environment compatibility failure. Reproduction uses a clean source copy and an
 existing dependency cache, with no install/upgrade. Fresh-machine installation,
 all Windows variants and minimum-version compatibility have not been proved.
 The complete dependency tree is not locked; source Registry data must remain available.
-No local project reinstall was performed: installed distribution metadata may still
+In that earlier reproduction no local project reinstall was performed: installed distribution metadata may still
 describe an older installation. The source-based runtime probes use the selected
 checkout's project version and module path; this is not a packaged-install check.
 
-Build and run the existing safe acceptance entries:
+C2 later verified isolated editable source metadata 0.3.0, not an ordinary wheel installation.
+Its overall acceptance is still blocked; see the source deployment scope for the exact results.
+
+Existing acceptance command references, for use only after independent permission to resume:
 
 ```powershell
 node packages/dsh-mechanical-plugin/scripts/build.mjs
