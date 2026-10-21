@@ -1,6 +1,6 @@
 # Mechanical Design Agent
 
-**Stable baseline: v0.2.0** (the only formally released version) · **In preparation: v0.3.0-experimental.1** — an Experimental development source snapshot (source-only; not yet published; not a stable runtime release) · **License:** [MIT](LICENSE)
+**Stable baseline: v0.2.0** (the only formally released version) · **v0.3.0-experimental.1** — an Experimental development source snapshot (source-only; not a stable runtime release) · **License:** [MIT](LICENSE)
 
 **v0.3 full runtime security acceptance: still BLOCKED (updated 2026-10-21).** Read the [source deployment scope, evidence and release gates](docs/V0_3_SOURCE_ONLY_DEPLOYMENT.md) and [Known Issues](KNOWN_ISSUES.md) before using the setup or acceptance commands below. C2 verified source deployment under existing dependency conditions, but Plugin regression was **136 passed, 1 failed (`a1-lifecycle`), 9 skipped**; V1.5 was not run. C3 remains **INSUFFICIENT EVIDENCE / BLOCKED**; C4 dynamic forensics has not run, C4-S0 is not independently accepted, and VM work is paused. The experimental source snapshot is a source-stage record, not runtime security acceptance, and does not establish reliable isolation guarantees for the new Supervisor. Full regression must await independent permission to resume. This is not release authorization.
 
