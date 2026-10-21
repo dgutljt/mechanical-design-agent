@@ -1,6 +1,8 @@
 # v0.3.0 SOURCE-ONLY 源码交付与部署范围（候选）
 
-状态日期：2026-10-20；Phase 14D-R1 文档候选，等待独立 Reviewer 审查。
+状态日期：2026-10-21；Phase 14D-R2 修订（Experimental 预发布文档准备）。
+R1 后独立 Reviewer 裁决：旧 Native 负零 P2 的披露延期已**有条件接受**（见“未关闭缺陷及安全门禁”），
+原条件与适用范围保留；C3 / C4 门禁状态不变。
 产品源码基线：`76bcad589b17764a7162b85860d68df28580bdbd`。
 Python 项目及 Plugin：**0.3.0**；DSH / DSH Tools / Win32 process provider：**0.2.0-rc.2**。
 正式发布基线仍为 **v0.2.0**；本说明不构成 Commit、Push、Tag 或 Release 授权。
@@ -9,6 +11,13 @@ Python 项目及 Plugin：**0.3.0**；DSH / DSH Tools / Win32 process provider�
 C2 整体为 BLOCKED，C3 独立结论仍为 **INSUFFICIENT EVIDENCE / BLOCKED**。
 C4-S0 只读取证方案已完成但未获独立技术验收；动态 C4 未执行，虚拟机工作暂停。
 不能据此声称 v0.3.0 已具备正式发布资格或独立技术 PASS。
+
+门禁区分（2026-10-21）：C3 PASS 是**正式运行时发布**（含完整安全验收的稳定版本）的前提，
+不是任何形式源码公开的统一前提。后续拟发布的 `v0.3.0-experimental.1` 属**实验性源码快照**：
+仅作为开发阶段源码记录，随附未关闭门禁与已知问题披露（见
+[KNOWN_ISSUES](../KNOWN_ISSUES.md) 与[发布说明草稿](releases/v0.3.0-experimental.1.md)），
+不宣称任何安全验收。实验性源码归档不构成运行时安全验收，
+不能据此宣称新增 Supervisor 已具备可靠隔离保证。
 
 ## 交付边界与证据等级
 
@@ -163,7 +172,10 @@ DSH rc.2 数值/输出校验拒绝，旧 Bridge 返回 `INTERNAL_ADAPTER_ERROR`�
 不能声称触发范围仅限空平面。C2 同一示例的直接 Python Adapter 三项 Reviewer PASS，
 只证明该示例源码路径可用；DSH 等价绕行办法为 **UNVERIFIED**。
 不得人为改载荷、改用 overhung 模型或改写负零充当已验收解决方案；未修复，修复计划/时间未定。
-是否允许披露延期仍需独立 Reviewer / Gatekeeper 裁决。
+延期裁决（2026-10-21）：独立 Reviewer 已**有条件接受**该 P2 的延期——保留上述原条件与适用范围：
+失败封闭行为不得放宽，触发范围不得缩小为仅空平面，DSH 等价绕行仍为 UNVERIFIED，
+并在实验性发布中以已知问题形式披露（KI-NUM-002）。延期不构成修复或技术 PASS；
+问题保持未修复状态，直至按原验收标准修复并复验。
 
 **生命周期异常：** C2 的 `a1-lifecycle` 预期 `BREAKAWAY_DENIED`，实际 `ESCAPED`。
 C3 确认该文字由父 Python 在 Popen 返回后打印；它既不能证明目标实际逃离指定 Supervisor Job，
